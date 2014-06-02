@@ -13,7 +13,7 @@
 !        R. Sander, Max-Planck Institute for Chemistry, Mainz, Germany
 ! 
 ! File                 : gckpp_Monitor.f90
-! Time                 : Fri May 23 15:58:31 2014
+! Time                 : Mon Jun  2 12:32:46 2014
 ! Working directory    : /home/mpayer/KPP
 ! Equation file        : gckpp.kpp
 ! Output root filename : gckpp
@@ -464,7 +464,7 @@ MODULE gckpp_Monitor
      '          N2O5 --> NO3 + NO2                                                                        ', &
      '          ALD2 --> CO + MO2 + HO2                                                                   ', &
      '          ALD2 --> CO + CH4                                                                         ', &
-     '           PAN --> 0.6 MCO3 + 0.4 MO2 + 0.4 NO3 + 0.6 NO2                                           ', &
+     '           PAN --> 0.7 MCO3 + 0.3 MO2 + 0.3 NO3 + 0.7 NO2                                           ', &
      '          RCHO --> CO + ETO2 + HO2                                                                  ', &
      '          ACET --> MCO3 + MO2                                                                       ', &
      '          ACET --> CO + 2 MO2                                                                       ', &

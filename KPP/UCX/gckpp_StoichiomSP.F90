@@ -13,7 +13,7 @@
 !        R. Sander, Max-Planck Institute for Chemistry, Mainz, Germany
 ! 
 ! File                 : gckpp_StoichiomSP.f90
-! Time                 : Fri May 23 15:43:16 2014
+! Time                 : Mon Jun  2 12:25:45 2014
 ! Working directory    : /home/mpayer/KPP
 ! Equation file        : gckpp.kpp
 ! Output root filename : gckpp
@@ -1086,9 +1086,9 @@ MODULE gckpp_StoichiomSP
        1.000000e+00_dp,  1.000000e+00_dp,  -1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp, &
        -1.000000e+00_dp,  -1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp, &
        -1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp, &
-       -1.000000e+00_dp,  -1.000000e+00_dp,  6.000000e-01_dp,  4.000000e-01_dp,  6.000000e-01_dp /)
+       -1.000000e+00_dp,  -1.000000e+00_dp,  7.000000e-01_dp,  3.000000e-01_dp,  7.000000e-01_dp /)
   REAL(kind=dp), PARAMETER, DIMENSION(150) :: STOICM_13 = (/ &
-       4.000000e-01_dp,  1.000000e+00_dp,  1.000000e+00_dp,  -1.000000e+00_dp,  1.000000e+00_dp, &
+       3.000000e-01_dp,  1.000000e+00_dp,  1.000000e+00_dp,  -1.000000e+00_dp,  1.000000e+00_dp, &
        -1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp,  1.000000e+00_dp,  -1.000000e+00_dp, &
        2.000000e+00_dp,  8.500000e-01_dp,  1.500000e-01_dp,  -1.000000e+00_dp,  8.500000e-01_dp, &
        1.500000e-01_dp,  1.000000e+00_dp,  -1.000000e+00_dp,  9.000000e-01_dp,  1.730000e+00_dp, &
