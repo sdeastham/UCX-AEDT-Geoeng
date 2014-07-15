@@ -199,6 +199,11 @@
       REAL*8, PARAMETER                 :: ISR_HOCl =1.d0/sqrt(52.46d0)
       REAL*8, PARAMETER                 :: ISR_HOBr =1.d0/sqrt(96.91d0)
       REAL*8                            :: CLOCKMR
+      REAL*8                            :: LNLBS_RMED, LNLBS_REFF
+      REAL*8                            :: LNLBS_RVOL
+      REAL*8                            :: LNLBS_RLIQ, LNLBS_VFALL
+      REAL*8                            :: LNLBS_SAD,  LNLBS_LNSSQ
+      REAL*8                            :: LNLBS_RMEAN,LNLBS_N
 
       ! Arrays
       REAL*8,DIMENSION(:,:),ALLOCATABLE     :: UCX_MR_IN
@@ -845,7 +850,7 @@
          ENDDO
 !$OMP END PARALLEL DO
 
-         ! Set stratospheric CH4 from AER data?
+         ! Set stratospheric CH4 from 2D data?
          IF ( STRAT2DCH4 ) THEN
             IF ( am_I_Root ) THEN
                WRITE(6,*) 'Setting stratospheric CH4 from 2D data.'
@@ -2592,6 +2597,7 @@
       ! Local variables for quantities from Input_Opt
       LOGICAL                :: LPRT
       LOGICAL                :: LGRAVSTRAT
+      LOGICAL                :: LLOGSTRAT
       INTEGER                :: N_TRACERS
       REAL*8                 :: XNUMOL(Input_Opt%N_TRACERS)
       REAL*8                 :: TRACER_MW_G(Input_Opt%N_TRACERS)
@@ -2606,6 +2612,7 @@
       ! Copy fields from INPUT_OPT
       LPRT        = Input_Opt%LPRT
       LGRAVSTRAT  = Input_Opt%LGRAVSTRAT
+      LLOGSTRAT   = Input_Opt%LLOGSTRAT
       N_TRACERS   = Input_Opt%N_TRACERS
       XNUMOL      = Input_Opt%XNUMOL
       TRACER_MW_G = Input_Opt%TRACER_MW_G(1:N_TRACERS)
@@ -2708,7 +2715,16 @@
                RHO(IBC) = BCDEN
 
                ! Get aerosol properties
-               RWET(ILIQ) = RAD_AER(I,J,L,I_SLA)*1.d-2
+
+               IF (LLOGSTRAT) THEN
+                  ! Calculation is done as if it was monodisperse with
+                  ! the same N0 and V0, then the flux is adjusted by a
+                  ! fixed factor exp(5*ln(sig)^2) (Considine, 2000)
+                  ! LNLBS_RVOL is already in m
+                  RWET(ILIQ) = LNLBS_RVOL
+               ELSE
+                  RWET(ILIQ) = RAD_AER(I,J,L,I_SLA)*1.d-2
+               ENDIF
                RHO(ILIQ)  = RHO_AER(I,J,L,I_SLA)
 
                ! Do we need to sediment NAT?
@@ -2786,7 +2802,13 @@
                   VNAT(L) = 0.d0
                ENDIF
             ENDIF ! RUNCALC
-         ENDDO
+         ENDDO ! L
+
+         ! Assume single log-normal distribution for
+         ! all liquid strat aerosol
+         IF (LLOGSTRAT) THEN
+            VTS(:,ILIQ) = VTS(:,ILIQ) * LNLBS_VFALL
+         ENDIF
 
          ! First apply simpler SLA sedimentation scheme
          ! Handle model top condition
@@ -3494,6 +3516,7 @@
       LOGICAL                :: LHOMNUCNAT
       LOGICAL                :: LSOLIDPSC
       LOGICAL                :: LACTIVEH2O
+      LOGICAL                :: LLOGSTRAT
       INTEGER                :: N_TRACERS
       REAL*8                 :: TRACER_MW_G(Input_Opt%N_TRACERS)
 
@@ -3511,6 +3534,7 @@
       LPRT        = Input_Opt%LPRT
       LHOMNUCNAT  = Input_Opt%LHOMNUCNAT
       LSOLIDPSC   = Input_Opt%LSOLIDPSC
+      LLOGSTRAT   = Input_Opt%LLOGSTRAT
       LACTIVEH2O  = Input_Opt%LACTIVEH2O
       N_TRACERS   = Input_Opt%N_TRACERS
       TRACER_MW_G = Input_Opt%TRACER_MW_G(1:N_TRACERS)
@@ -3933,8 +3957,23 @@
                   HOBr_BOX_L = HOBrSUM-HOBr_BOX_G
 
                   ! Calculate SLA parameters (Grainger 1995)
-                  SAD_AER_BOX = SLA_VA*(VOL_SLA**0.751d0)        ! cm2/cm3
-                  RAD_AER_BOX = SLA_VR*SLA_RR*(VOL_SLA**0.249d0) ! m
+                  IF (Input_Opt%LLOGSTRAT) THEN
+                      ! Use log-normal distribution
+                      ! First need median radius
+                      RAD_AER_BOX = LNLBS_RMED ! m
+                      ! Calculate number density in #/m3
+                      ! by assuming fixed r and sigma
+                      NDENS_AER_BOX = VOL_SLA*LNLBS_N
+                      SAD_AER_BOX = LNLBS_SAD * NDENS_AER_BOX ! cm2/cm3
+                  ELSE
+                      ! Use Grainger's 1995 parameterization
+                      SAD_AER_BOX = SLA_VA*(VOL_SLA**0.751d0)        ! cm2/cm3
+                      !RAD_AER_BOX = SLA_VR*SLA_RR*(VOL_SLA**0.249d0) ! m
+                      ! Equivalent, faster and more precise
+                      RAD_AER_BOX = VOL_SLA*(3.0d-2)/SAD_AER_BOX
+                      NDENS_AER_BOX = VOL_SLA*3.d0/
+     &                    (4.d0*PI*(RAD_AER_BOX**3.d0))
+                  ENDIF
                   KG_AER_BOX  = RHO_AER_BOX*VOL_SLA*             ! kg
      &                          State_Met%AIRVOL(I,J,L)
 
@@ -4171,7 +4210,7 @@
 !\\
 ! !INTERFACE:
 !
-      SUBROUTINE GET_STRAT_OPT (I,J,L,IAER,RAER,REFF,SAD,XSA)
+      SUBROUTINE GET_STRAT_OPT (I,J,L,IAER,LLOGSTRAT,RAER,REFF,SAD,XSA)
 !
 ! !INPUT PARAMETERS:
 !
@@ -4179,6 +4218,8 @@
       INTEGER,INTENT(IN)          :: IAER       ! Aerosol index
                                                 ! 1 = Liquid aerosols
                                                 ! 2 = Solid PSC
+      LOGICAL,INTENT(IN)          :: LLOGSTRAT  ! Are we using
+                                                ! log-normal aerosols?
 !
 ! !OUTPUT VARIABLES:
 !
@@ -4204,7 +4245,15 @@
       ! For SLA, convert liquid radius to effective optical radius
       RAER = RAD_AER(I,J,L,IAER)
       IF (IAER.eq.I_SLA) THEN
-         REFF = RAER/SLA_RR
+         IF (LLOGSTRAT) THEN
+             ! Cross-sectional area weighted mean for effective radius
+             REFF = RAER*LNLBS_REFF
+             ! Number-density mean for everything else
+             ! (RAER is used for het-chem)
+             RAER = RAER*LNLBS_RMEAN
+         ELSE
+            REFF = RAER/SLA_RR
+        ENDIF
       ELSE
          REFF = RAER
       ENDIF
@@ -5922,6 +5971,7 @@
       USE GRID_MOD,           ONLY : GET_YEDGE
       USE TIME_MOD,           ONLY : GET_YEAR
       USE TRACERID_MOD
+      USE CMN_GCTM_MOD,       ONLY : PI
 !
 ! !INPUT PARAMETERS:
 !
@@ -5970,6 +6020,9 @@
       LOGICAL :: LSETNOYSTRAT
       LOGICAL :: LSETN2O
       LOGICAL :: LBASICEMIS
+      LOGICAL :: LLOGSTRAT
+      REAL*8  :: RLBS_LN
+      REAL*8  :: SIGLBS_LN
 
       !=================================================================
       ! INIT_UCX begins here!
@@ -5994,6 +6047,9 @@
       LSETNOYSTRAT = Input_Opt%LSETNOYSTRAT
       LSETN2O      = Input_Opt%LSETN2O
       LBASICEMIS   = Input_Opt%LBASICEMIS
+      LLOGSTRAT    = Input_Opt%LLOGSTRAT
+      RLBS_LN      = Input_Opt%RLBS_LN
+      SIGLBS_LN    = Input_Opt%SIGLBS_LN
 
       WRITE( 6,'(a)') REPEAT( '=', 79 )
       WRITE( 6,'(a)') 'U N I F I E D   C H E M I S T R Y'
@@ -6005,20 +6061,25 @@
      &              LSETBRSTRAT .or. LSETNOYSTRAT .or. LSETN2O    .or.
      &              LBASICEMIS  )
 
+      ! This only matters if we aren't using NetCDF
+      IF (.not. UCXNETCDF) THEN
 #if !defined(GRID4x5) && !defined(GRID2x25)
-      IF ( LUCX .and. USE2DDATA ) THEN
-       DBGMSG = 'Zonal means preprocessed only for 2x2.5 and 4x5 grid.'
-       CALL ERROR_STOP( DBGMSG, 'INIT_UCX (UCX_mod.f)!' )
-      ELSE
-       AVG_FILE_ROOT = ''
-      ENDIF
+       IF ( LUCX .and. USE2DDATA ) THEN
+        DBGMSG = 'Zonal means preprocessed only for 2x2.5 and 4x5 grid.'
+        CALL ERROR_STOP( DBGMSG, 'INIT_UCX (UCX_mod.f)!' )
+       ELSE
+        AVG_FILE_ROOT = ''
+       ENDIF
 #elif defined(GRID2x25)
-      GRIDSPEC = 'Grid2x25/InitCFC_'
+       GRIDSPEC = 'Grid2x25/InitCFC_'
 #elif defined(GRID4x5)
-      GRIDSPEC = 'Grid4x5/InitCFC_'
+       GRIDSPEC = 'Grid4x5/InitCFC_'
 #else
-      GRIDSPEC = ''
+       GRIDSPEC = ''
 #endif
+      ELSE
+       GRIDSPEC = ''
+      ENDIF
 
       ! Determine folder paths from root folder
       IF (UCXNETCDF) THEN
@@ -6093,6 +6154,29 @@
       ! Factor to convert volume (m3/m3) to effective
       ! radius (m)
       SLA_VR = (0.357d-6)*(10.d0**(12.d0*0.249))
+
+      ! Log-normal STS/LBS factors
+      IF (LLOGSTRAT) THEN
+          ! Convert from um to m
+          LNLBS_RMED = RLBS_LN * 1.d-6
+          ! Multipliers for the median radius
+          LNLBS_LNSSQ = (DLOG(SIGLBS_LN))**2.0d0
+          ! Volume-weighted mean radius (m)
+          LNLBS_RVOL = LNLBS_RMED*DEXP(1.5d0*LNLBS_LNSSQ)
+          ! Yields N in #/m3 when multipled by V0
+          LNLBS_N = DEXP(-4.5d0*LNLBS_LNSSQ)*0.75d0/
+     &       (PI*(LNLBS_RMED*LNLBS_RMED*LNLBS_RMED))
+          !! This yields m
+          !LNLBS_RMED = 0.5d0*DEXP(-1.5d0*LNLBS_LNSSQ)*
+     &    !              ((6.0d0/(PI*NLBS_LN*1.0d6))**(1.0d0/3.0d0))
+          LNLBS_REFF = DEXP(2.5d0*LNLBS_LNSSQ)
+          LNLBS_RLIQ = DEXP(3.5d0*LNLBS_LNSSQ)
+          LNLBS_RMEAN= DEXP(0.5d0*LNLBS_LNSSQ)
+          LNLBS_VFALL= DEXP(5.0d0*LNLBS_LNSSQ)
+          ! This yields cm2/cm3 when multiplied by N
+          LNLBS_SAD  = LNLBS_RMED*LNLBS_RMED*
+     &                 PI*4.0d-2*DEXP(2.0d0*LNLBS_LNSSQ)
+      ENDIF
 
       ! Set clock tracer mixing ratio to zero
       CLOCKMR = 0d0

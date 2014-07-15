@@ -842,6 +842,7 @@
       LOGICAL             :: LSSALT
       LOGICAL             :: LSULF
       LOGICAL             :: LSTRATOD
+      LOGICAL             :: LLOGSTRAT
 
       ! Pointers
       REAL*8, POINTER     :: BXHEIGHT(:,:,:)
@@ -860,6 +861,7 @@
       LSSALT               = Input_Opt%LSSALT
       LSULF                = Input_Opt%LSULF
       LSTRATOD             = Input_Opt%LSTRATOD
+      LLOGSTRAT            = Input_Opt%LLOGSTRAT
 
       ! Initialize pointers
       BXHEIGHT            => State_Met%BXHEIGHT
@@ -1525,7 +1527,8 @@
          DO I = 1, IIPAR
 
             ! Get aerosol effective radius
-            CALL GET_STRAT_OPT(I,J,L,ISTRAT,RAER,REFF,SADSTRAT,XSASTRAT)
+            CALL GET_STRAT_OPT(I,J,L,ISTRAT,LLOGSTRAT,
+     &             RAER,REFF,SADSTRAT,XSASTRAT)
 
             ! SDE 2014-02-04
             ! The calculation used for the aerosols above

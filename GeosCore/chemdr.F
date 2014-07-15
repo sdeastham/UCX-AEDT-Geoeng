@@ -490,7 +490,7 @@
          !-------------------------------
          ! Initialize FAST-JX photolysis
          !-------------------------------
-         CALL INIT_FJX(am_I_Root) 
+         CALL INIT_FJX(am_I_Root, Input_Opt) 
          
          !### Debug
          IF ( prtDebug ) THEN

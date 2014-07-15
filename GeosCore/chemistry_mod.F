@@ -420,7 +420,7 @@
                ! Init chem mechanism and photolysis
                CALL READER  ( FIRST,     am_I_Root            )
                CALL READCHEM( am_I_Root, Input_Opt, RC        )
-               CALL INIT_FJX( am_I_Root  )
+               CALL INIT_FJX( am_I_Root, Input_Opt  )
  
                ! Reset NCS with NCSURBAN
                NCS     = NCSURBAN

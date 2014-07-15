@@ -1663,6 +1663,9 @@
 !
       INTEGER            :: N, T, I
       CHARACTER(LEN=255) :: SUBSTRS(MAXDIM), MSG, LOCATION, PSC_RST_FILE
+      INTEGER            :: IDX_LBS
+      REAL*8             :: RLBS_LN, SIGLBS_LN
+      LOGICAL            :: LLOGSTRAT
 
       !=================================================================
       ! READ_AEROSOL_MENU begins here!
@@ -1767,6 +1770,22 @@
       ! Include stratospheric aerosols optical depths?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:20' )
       READ( SUBSTRS(1:N), * ) LSTRATOD
+
+      ! Log-normally distributed LBS aerosol?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:LNLBS1' )
+      READ( SUBSTRS(1:N), * ) LLOGSTRAT
+
+      ! What index are we going to us?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:LNLBS2' )
+      READ( SUBSTRS(1:N), * ) IDX_LBS
+
+      ! Aerosol modal radius (um)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:LNLBS3' )
+      READ( SUBSTRS(1:N), * ) RLBS_LN
+
+      ! Aerosol standard deviation (pseudo um)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:LNLBS4' )
+      READ( SUBSTRS(1:N), * ) SIGLBS_LN
 
       ! Separator line
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_aerosol_menu:21' )
@@ -1982,6 +2001,16 @@
          ENDIF
       ENDIF
 
+      !---------------------------------
+      ! Error check STRAT SULFATE AEROSOLS
+      !---------------------------------
+      IF (LLOGSTRAT) THEN
+         IF ((IDX_LBS .lt. 57) .or. (IDX_LBS. gt. 59)) THEN
+            MSG = 'Only LBS aerosol indices 57 to 59 are log-normal!'
+            CALL ERROR_STOP( MSG, LOCATION )
+         ENDIF
+      ENDIF
+
       !=================================================================
       ! Set fields of Input Options object
       !=================================================================
@@ -2004,6 +2033,10 @@
       Input_Opt%P_ICE_SUPERSAT     = P_ICE_SUPERSAT
       Input_Opt%LPSCCHEM           = LPSCCHEM
       Input_Opt%LSTRATOD           = LSTRATOD
+      Input_Opt%LLOGSTRAT          = LLOGSTRAT
+      Input_Opt%RLBS_LN            = RLBS_LN
+      Input_Opt%SIGLBS_LN          = SIGLBS_LN
+      Input_Opt%IDX_LBS            = IDX_LBS
 
       ! Return success
       RC = GIGC_SUCCESS
@@ -2041,6 +2074,12 @@
      &                                        ((P_ICE_SUPERSAT-1)*1.d2)
          WRITE( 6, 100     ) 'Perform PSC het. chemistry? : ',LPSCCHEM
          WRITE( 6, 100     ) 'Use strat. aerosol OD?      : ', LSTRATOD
+         WRITE( 6, 100     ) 'Use log-normal LBS?         : ', LLOGSTRAT
+         IF (LLOGSTRAT) THEN
+            WRITE( 6, 140  ) ' --> Index                  : ', IDX_LBS
+            WRITE( 6, 105  ) ' --> Modal radius (um)      : ', RLBS_LN
+            WRITE( 6, 105  ) ' --> Standard deviation (um): ', SIGLBS_LN
+         ENDIF
       ENDIF
 
  100  FORMAT( A, L5     )
@@ -2048,6 +2087,7 @@
  120  FORMAT( A, f6.2, 'K' )
  105  FORMAT( A, f6.2 )
  130  FORMAT( A, A   )
+ 140  FORMAT( A, I2  )
 
       END SUBROUTINE READ_AEROSOL_MENU
 !EOC

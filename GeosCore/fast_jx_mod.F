@@ -1612,16 +1612,19 @@ c---check on overflow of arrays, cut off JXTRA at lower L if too many levels
 !\\
 ! !INTERFACE:
 !
-      SUBROUTINE INIT_FJX(am_I_Root)
+      SUBROUTINE INIT_FJX(am_I_Root,Input_Opt)
 !
 ! !USES:
 !
-      USE inquireMod,   ONLY : findFreeLUN
-      USE CMN_DIAG_MOD, ONLY : ND64
+      USE GIGC_Input_Opt_Mod, ONLY : OptInput
+      USE inquireMod,         ONLY : findFreeLUN
+      USE CMN_DIAG_MOD,       ONLY : ND64
 !
 ! !INPUT PARAMETERS:
 !
-      LOGICAL, INTENT(IN) :: am_I_Root   ! Is this the root CPU?
+      LOGICAL, INTENT(IN)         :: am_I_Root   ! Is this the root CPU?
+      TYPE(OptInput), INTENT(IN)  :: Input_Opt
+
 !
 ! !OUTPUT VARIABLES:
 !
@@ -1717,7 +1720,7 @@ c---check on overflow of arrays, cut off JXTRA at lower L if too many levels
       call RD_AOD(JXUNIT,TRIM( FILENAME ), am_I_Root)
 
       ! Set up MIEDX array to interpret between GC and FJX aerosol indexing
-      call SET_AER(am_I_Root)
+      call SET_AER(am_I_Root,Input_Opt%LLOGSTRAT,Input_Opt%IDX_LBS)
 
       ! Read in T & O3 climatology used to fill e.g. upper layers or if O3 not calc.
       call RD_PROF_NC( am_I_Root )
@@ -3775,7 +3778,7 @@ C---Always does PL(2) = P[1]
 !\\
 ! !INTERFACE:
 !
-      SUBROUTINE SET_AER(am_I_Root)
+      SUBROUTINE SET_AER(am_I_Root,LLOGSTRAT,IDX_LBS)
 !
 ! !USES:
 !
@@ -3783,6 +3786,8 @@ C---Always does PL(2) = P[1]
 ! !INPUT PARAMETERS:
 !
       LOGICAL, INTENT(IN) :: am_I_Root
+      LOGICAL, INTENT(IN) :: LLOGSTRAT
+      INTEGER, INTENT(IN) :: IDX_LBS
 !
 ! !OUTPUT VARIABLES:
 !
@@ -3837,7 +3842,12 @@ C---Always does PL(2) = P[1]
 
 #if defined( UCX )
       ! Stratospheric aerosols - SSA/STS and solid PSCs
-      MIEDX(10+(NRHAER*NRH)+1) = 4  ! SSA/LBS/STS
+      IF (LLOGSTRAT) THEN
+         MIEDX(10+(NRHAER*NRH)+1) = IDX_LBS
+      ELSE
+         ! Conventional background stratospheric sulfate
+         MIEDX(10+(NRHAER*NRH)+1) = 4  ! SSA/LBS/STS
+      ENDIF
       MIEDX(10+(NRHAER*NRH)+2) = 14 ! NAT/ice PSCs
 #endif
 c

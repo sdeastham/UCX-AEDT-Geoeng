@@ -93,7 +93,8 @@
       INTEGER, PARAMETER ::  X_    = 72
 
       ! A_   = dim = no. of Aerosol/cloud Mie sets (input data)
-      INTEGER, PARAMETER ::  A_    = 56
+      !INTEGER, PARAMETER ::  A_    = 56
+      INTEGER, PARAMETER :: A_     = 59 ! With log-normal LBS
 
       ! W_   = dim = no. of Wavelength bins:  =18 std, =12 trop only
 #if defined( UCX )

@@ -1078,7 +1078,7 @@
             CALL READCHEM
             
             ! Call INIT_FJX to initialize the fast-JX variables. 
-            CALL INIT_FJX( am_I_Root )
+            CALL INIT_FJX( am_I_Root, Input_Opt )
             
             ! Echo output
             IF (am_I_Root) THEN
