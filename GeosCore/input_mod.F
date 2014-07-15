@@ -2351,8 +2351,8 @@
 !                              running with the traditional driver main.F
 !  01 Nov 2012 - R. Yantosca - Now pass Input_Opt, RC as arguments
 !  22 Jul 2013 - M. Sulprizio- Now copy LRCP, LRCPSHIP, LRCPAIR to Input_Opt
-!  31 Jul 2013 - M. Sulprizio- Now copy LAEIC to Input_Opt; Add check to
-!                              make sure LAEIC and LRCPAIR are not both on
+!  31 Jul 2013 - M. Sulprizio- Now copy LAIREMISS to Input_Opt; Add check to
+!                              make sure LAIREMISS and LRCPAIR are not both on
 !  22 Aug 2013 - R. Yantosca - Now read path for soil NOx restart file
 !  26 Sep 2013 - R. Yantosca - Remove SEAC4RS C-preprocessor switch
 !  03 Oct 2013 - M. Sulprizio- Removed obsolete options for LAVHRRLAI and
@@ -2426,9 +2426,136 @@
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:11' )
       READ( SUBSTRS(1:N), * ) LRETRO
 
-      ! AEIC aircraft emissions
+      ! Separator line (start of aircraft emissions options)
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:12' )
-      READ( SUBSTRS(1:N), * ) LAEIC
+
+      ! Use AEDT (FAA) inventory?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR1' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LAEDT
+
+      ! Use AEIC (LAE) inventory?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR2' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LAEIC
+
+      ! Use standard SO2 inventory?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR3' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LAIRSO2
+
+      ! Are any full aviation inventories being used
+      LAIREMISS = (Input_Opt%LAEIC.or.Input_Opt%LAEDT)
+      Input_Opt%LAIREMISS = LAIREMISS
+
+      ! Run LTO emissions?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR4' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LLTO_EMIS
+
+      ! Fuelburn multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR5' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_FB_MULT
+
+      ! NOx multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR6' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_NOx_MULT
+
+      ! HC multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR7' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_HC_MULT
+
+      ! CO multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR8' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_CO_MULT
+
+      ! Black carbon emissions index
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR9' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_BC_EI
+
+      ! Organic carbon emissions index
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR10' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LTO_OC_EI
+
+      ! Run CRUISE emissions?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR11' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%LCRUISE_EMIS
+
+      ! Fuelburn multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR12' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_FB_MULT
+
+      ! NOx multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR13' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_NOx_MULT
+
+      ! HC multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR14' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_HC_MULT
+
+      ! CO multiplier
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR15' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_CO_MULT
+
+      ! Black carbon emissions index
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR16' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_BC_EI
+
+      ! Organic carbon emissions index
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR17' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%CRUISE_OC_EI
+
+      ! Fuel sulfur content
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR18' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%FSC
+
+      ! Convert to fraction
+      Input_Opt%FSC = Input_Opt%FSC * 1.d-6
+
+      ! Sulfur conversion efficiency
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR19' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%SULFCONV
+
+      Input_Opt%SULFCONV = Input_Opt%SULFCONV * 1.d-2
+
+      ! Exclusion code (-1/0/1) and LL and RR corners grid idx
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR20' )
+      READ( SUBSTRS(1:N), * ) Input_Opt%EXC_CODE
+
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 2, 'read_emissions_menu:AIR21' )
+      READ(SUBSTRS(1:N),*) Input_Opt%EXC_LL_I,Input_Opt%EXC_LL_J
+
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 2, 'read_emissions_menu:AIR22' )
+      READ(SUBSTRS(1:N),*) Input_Opt%EXC_UR_I,Input_Opt%EXC_UR_J
+  
+      ! Cut-off altitude (no emissions below this) in km
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR23' )
+      READ(SUBSTRS(1:N),*) Input_Opt%ALT_FLR
+
+      ! Altitude offset in km
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR24' )
+      READ(SUBSTRS(1:N),*) Input_Opt%ALT_OFFSET
+ 
+      ! AEDT preprocessed emissions directory
+      CALL SPLIT_ONE_LINE( SUBSTRS, N,1,'read_emissions_menu:AIR25' )
+      READ( SUBSTRS(1:N), '(a)' ) Input_Opt%AEDT_DIR
+      
+      Input_Opt%LLTO_EMIS = (Input_Opt%LLTO_EMIS .and. LAIREMISS)
+      Input_Opt%LCRUISE_EMIS = (Input_Opt%LCRUISE_EMIS .and. LAIREMISS)
+      
+      ! Implement LTO and cruise switches
+      IF (.not.Input_Opt%LLTO_EMIS) THEN
+          Input_Opt%LTO_FB_MULT = 0d0
+      ENDIF
+
+      IF (.not.Input_Opt%LCRUISE_EMIS) THEN
+          Input_Opt%CRUISE_FB_MULT = 0d0
+      ENDIF
+
+      ! Implement LTO and cruise switches
+      IF (.not.Input_Opt%LLTO_EMIS) THEN
+          Input_Opt%LTO_FB_MULT = 0d0
+      ENDIF
+
+      IF (.not.Input_Opt%LCRUISE_EMIS) THEN
+          Input_Opt%CRUISE_FB_MULT = 0d0
+      ENDIF
 
       ! Use RCP emissions? (cdh, 10/18/11)
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:RCP1' )
@@ -2727,7 +2854,7 @@
       LBIOMASS          = ( LBIOMASS       .and. LEMIS     )
 
       ! Anthro
-      LAEIC             = ( LAEIC          .and. LANTHRO   )
+      LAIREMISS         = ( LAIREMISS      .and. LANTHRO   )
       LEMEP             = ( LEMEP          .and. LANTHRO   )
       LBRAVO            = ( LBRAVO         .and. LANTHRO   )
       LEDGAR            = ( LEDGAR         .and. LANTHRO   )
@@ -2781,7 +2908,7 @@
       ! Turn off full-chem only switches 
       IF ( .not. ITS_A_FULLCHEM_SIM() ) THEN
          LLIGHTNOX      = .FALSE.
-         LAEIC          = .FALSE.
+         LAIREMISS      = .FALSE.
          LSOILNOX       = .FALSE.
          LFERTILIZERNOX = .FALSE. 
          LSETH2O        = .FALSE.
@@ -2832,9 +2959,9 @@
      &           'READ_EMISSIONS_MENU' )
 
          ! Force user to choose just 1 global aircraft inventory
-         IF ( LAEIC .AND. LRCPAIR )
+         IF ( (Input_Opt%LAEIC.or.Input_Opt%LAEDT) .AND. LRCPAIR )
      &        CALL ERROR_STOP( 'INPUT.GEOS WARNING!! '//
-     &           'Choose either RCP or AEIC for global aircraft' //
+     &           'Choose either RCP, AEDT or AEIC for global aircraft'//
      &           ' emissions', 'READ_EMISSIONS_MENU' )
 
          ! Avoid double fertilizer NOx emissions
@@ -3216,7 +3343,7 @@
       Input_Opt%LGFED3BB       = LGFED3BB
       Input_Opt%LDAYBB3        = LDAYBB3
       Input_Opt%L3HRBB3        = L3HRBB3
-      Input_Opt%LAEIC          = LAEIC
+      Input_Opt%LAIREMISS      = LAIREMISS
       Input_Opt%LLIGHTNOX      = LLIGHTNOX
       Input_Opt%LOTDLOC        = LOTDLOC
       Input_Opt%LSOILNOX       = LSOILNOX
@@ -3290,7 +3417,13 @@
         WRITE( 6, 100 ) '  Use STREETS anthro emiss. : ', LSTREETS
         WRITE( 6, 100 ) '  Use EPA/NEI 2005          : ', LNEI05
         WRITE( 6, 100 ) '  Use RETRO emissions       : ', LRETRO
-        WRITE( 6, 100 ) '  Use AEIC emissions        : ', LAEIC
+        WRITE( 6, 100 ) '  Use aircraft emissions    : ', LAIREMISS
+        WRITE( 6, 100 ) '      AEIC                  : ',
+     &                                    Input_Opt%LAEIC
+        WRITE( 6, 100 ) '      AEDT                  : ',
+     &                                    Input_Opt%LAEDT
+        WRITE( 6, 100 ) '      SO2 only              : ',
+     &                                    Input_Opt%LAIRSO2
         WRITE( 6, 100 ) '  Use RCP emissions         : ', LRCP
         WRITE( 6, 130 ) '      RCP scenario?         : ', TRIM(RCPNAME)
         WRITE( 6, 110 ) '      RCP year?             : ', RCPYEAR
@@ -9077,7 +9210,7 @@
       LPRT           = .FALSE.
       LSTDRUN        = .FALSE.
       LDRYD          = .FALSE.
-      LAEIC          = .FALSE.
+      LAIREMISS      = .FALSE.
       LANTHRO        = .FALSE.
       LBIONOX        = .FALSE.
       LBIOMASS       = .FALSE.

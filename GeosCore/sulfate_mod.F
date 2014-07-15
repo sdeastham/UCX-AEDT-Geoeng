@@ -5925,7 +5925,7 @@
       LOGICAL       :: LBIOMASS
       LOGICAL       :: LPRT
       LOGICAL       :: LSHIPSO2
-      LOGICAL       :: LAEIC
+      LOGICAL       :: LAIRSO2
       LOGICAL       :: ITS_AN_AEROSOL_SIM
       INTEGER       :: N_TRACERS
 
@@ -5947,7 +5947,7 @@
       LBIOMASS           = Input_Opt%LBIOMASS
       LPRT               = Input_Opt%LPRT
       LSHIPSO2           = Input_Opt%LSHIPSO2
-      LAEIC              = Input_Opt%LAEIC
+      LAIRSO2            = Input_Opt%LAIRSO2
       ITS_AN_AEROSOL_SIM = Input_Opt%ITS_AN_AEROSOL_SIM
       N_TRACERS          = Input_Opt%N_TRACERS
 
@@ -6038,11 +6038,11 @@
          ! (ccc, 4/15/09)
          IF ( LANTHRO ) THEN
 
-            IF ( LAEIC) THEN
-               ! AEIC sets aircraft SOx elsewhere
-               ESO2_ac = 0d0
-            ELSE
+            IF ( LAIRSO2 ) THEN
                CALL READ_AIRCRAFT_SO2( MONTH, State_Met )
+            ELSE
+               ! AEIC/AEDT set aircraft SOx elsewhere
+               ESO2_ac = 0d0
             ENDIF
 #if defined( TOMAS )
             ! Scale anthro SO2 for TOMAS

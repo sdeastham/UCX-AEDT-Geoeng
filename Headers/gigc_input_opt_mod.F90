@@ -120,6 +120,10 @@ MODULE GIGC_Input_Opt_Mod
      REAL*8                      :: P_ICE_SUPERSAT
      LOGICAL                     :: LPSCCHEM
      LOGICAL                     :: LSTRATOD
+     LOGICAL                     :: LLOGSTRAT
+     REAL*8                      :: RLBS_LN
+     REAL*8                      :: SIGLBS_LN
+     INTEGER                     :: IDX_LBS
 
      !----------------------------------------
      ! EMISSIONS MENU fields
@@ -155,7 +159,38 @@ MODULE GIGC_Input_Opt_Mod
      LOGICAL                     :: LGFED3BB
      LOGICAL                     :: LDAYBB3
      LOGICAL                     :: L3HRBB3
-     LOGICAL                     :: LAEIC
+
+     !---AIRCRAFT (SDE 2014-07-14)---
+     LOGICAL                     :: LAIREMISS
+     LOGICAL                     :: LAIRSO2  
+     LOGICAL                     :: LAEDT    
+     LOGICAL                     :: LAEIC   
+     LOGICAL                     :: LLTO_EMIS
+     REAL*8                      :: LTO_FB_MULT
+     REAL*8                      :: LTO_CO_MULT
+     REAL*8                      :: LTO_NOx_MULT
+     REAL*8                      :: LTO_HC_MULT
+     REAL*8                      :: LTO_BC_EI
+     REAL*8                      :: LTO_OC_EI
+     LOGICAL                     :: LCRUISE_EMIS
+     REAL*8                      :: CRUISE_FB_MULT
+     REAL*8                      :: CRUISE_CO_MULT
+     REAL*8                      :: CRUISE_NOx_MULT
+     REAL*8                      :: CRUISE_HC_MULT
+     REAL*8                      :: CRUISE_BC_EI
+     REAL*8                      :: CRUISE_OC_EI
+     REAL*8                      :: FSC
+     REAL*8                      :: SULFCONV
+     INTEGER                     :: EXC_CODE
+     INTEGER                     :: EXC_UR_I
+     INTEGER                     :: EXC_UR_J
+     INTEGER                     :: EXC_LL_I
+     INTEGER                     :: EXC_LL_J
+     REAL*8                      :: ALT_FLR   
+     REAL*8                      :: ALT_OFFSET
+     CHARACTER(LEN=255)          :: AEDT_DIR
+     !---AIRCRAFT (SDE 2014-07-14)---
+
      LOGICAL                     :: LLIGHTNOX
      LOGICAL                     :: LOTDLOC
      LOGICAL                     :: LSOILNOX
@@ -823,6 +858,10 @@ CONTAINS
     Input_Opt%P_ICE_SUPERSAT         = 0d0
     Input_Opt%LPSCCHEM               = .FALSE.
     Input_Opt%LSTRATOD               = .FALSE.
+    Input_Opt%LLOGSTRAT              = .FALSE.
+    Input_Opt%IDX_LBS                = 57
+    Input_Opt%RLBS_LN                = 0.06
+    Input_Opt%SIGLBS_LN              = 1.8
 
     !----------------------------------------
     ! EMISSIONS MENU fields
@@ -858,7 +897,36 @@ CONTAINS
     Input_Opt%LGFED3BB               = .FALSE.
     Input_Opt%LDAYBB3                = .FALSE.
     Input_Opt%L3HRBB3                = .FALSE.
+     !---AIRCRAFT (SDE 2014-07-14)---
+    Input_Opt%LAIREMISS              = .FALSE.
+    Input_Opt%LAIRSO2                = .FALSE.
+    Input_Opt%LAEDT                  = .FALSE. 
     Input_Opt%LAEIC                  = .FALSE.
+    Input_Opt%LLTO_EMIS              = .FALSE.
+    Input_Opt%LTO_FB_MULT            = 1.0d0
+    Input_Opt%LTO_CO_MULT            = 1.0d0
+    Input_Opt%LTO_NOx_MULT           = 1.0d0
+    Input_Opt%LTO_HC_MULT            = 1.0d0
+    Input_Opt%LTO_BC_EI              = 0.03d0
+    Input_Opt%LTO_OC_EI              = 0.03d0
+    Input_Opt%LCRUISE_EMIS           = .FALSE.
+    Input_Opt%CRUISE_FB_MULT         = 1.0d0
+    Input_Opt%CRUISE_CO_MULT         = 1.0d0
+    Input_Opt%CRUISE_NOx_MULT        = 1.0d0
+    Input_Opt%CRUISE_HC_MULT         = 1.0d0
+    Input_Opt%CRUISE_BC_EI           = 0.03d0
+    Input_Opt%CRUISE_OC_EI           = 0.03d0
+    Input_Opt%FSC                    = 600.d-6
+    Input_Opt%SULFCONV               = 2.0d-2 
+    Input_Opt%EXC_CODE               = 0
+    Input_Opt%EXC_UR_I               = 0
+    Input_Opt%EXC_UR_J               = 0.
+    Input_Opt%EXC_LL_I               = 0
+    Input_Opt%EXC_LL_J               = 0
+    Input_Opt%ALT_FLR                = 0.0
+    Input_Opt%ALT_OFFSET             = 0.0
+    Input_Opt%AEDT_DIR               = ''
+     !---AIRCRAFT (SDE 2014-07-14)---
     Input_Opt%LLIGHTNOX              = .FALSE.
     Input_Opt%LOTDLOC                = .FALSE.
     Input_Opt%LSOILNOX               = .FALSE.

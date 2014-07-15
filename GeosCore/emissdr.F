@@ -223,7 +223,7 @@
       LOGICAL                :: LBIOGENIC
       LOGICAL                :: LNLPBL
       LOGICAL                :: LRCPAIR
-      LOGICAL                :: LAEIC
+      LOGICAL                :: LAIREMISS
       LOGICAL                :: LCH4EMIS
       LOGICAL                :: ITS_A_TAGCO_SIM
       INTEGER                :: N_TRACERS
@@ -254,7 +254,7 @@
       LBIOGENIC        = Input_Opt%LBIOGENIC
       LNLPBL           = Input_Opt%LNLPBL
       LRCPAIR          = Input_Opt%LRCPAIR
-      LAEIC            = Input_Opt%LAEIC
+      LAIREMISS        = Input_Opt%LAIREMISS
       LCH4EMIS         = Input_Opt%LCH4EMIS
       ITS_A_TAGCO_SIM  = Input_Opt%ITS_A_TAGCO_SIM
       N_TRACERS        = Input_Opt%N_TRACERS
@@ -469,7 +469,7 @@
 !
             ! Choose between RCP inventory and default
             ! (cdh, 6/14/12)
-            IF ( LAEIC   .AND. I == 1 .AND. J == 1 ) THEN
+            IF ( LAIREMISS .AND. I == 1 .AND. J == 1 ) THEN
                CALL EMIT_AEIC( Input_Opt, State_Met, State_Chm )
             ENDIF
             IF ( LRCPAIR .AND. I == 1 .AND. J == 1 ) THEN

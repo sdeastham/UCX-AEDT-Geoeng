@@ -129,7 +129,7 @@
       LOGICAL :: USE_OLSON_2001  ! Use the Olson 2001 land map & drydep info?
 
       !%%%% Emissions %%%%
-      LOGICAL :: LAEIC           ! Use aircraft emissions from AEIC?
+      LOGICAL :: LAIREMISS       ! Use aircraft emissions (non-RCP?)
       LOGICAL :: LANTHRO         ! Turns all anthropogenic emissions on/off
       LOGICAL :: LBBSEA          ! Use seasonal biomass burning emissions?
       LOGICAL :: LBIONOX         ! <-- deprecated: replace w/ LBIOMASS soon
