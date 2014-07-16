@@ -112,6 +112,7 @@
       USE DIAG_MOD,           ONLY : AD29,          AD46
       USE DIAG_MOD,           ONLY : AD32_fe,       AD32_so
       USE EMISSIONS_MOD,      ONLY : ISOP_SCALING
+      USE GEOENG_MOD,         ONLY : EMIT_GEOENG
       USE GET_NDEP_MOD,       ONLY : GET_DEP_N 
       USE GIGC_ErrCode_Mod
       USE GIGC_Input_Opt_Mod, ONLY : OptInput
@@ -474,6 +475,12 @@
             ENDIF
             IF ( LRCPAIR .AND. I == 1 .AND. J == 1 ) THEN
                CALL RCP_AIREMISS( State_Met )
+            ENDIF
+!-----------------------------------------------------------------------------
+! GEOENGINEERING emissions [kg/box]
+!
+            IF ( Input_Opt%LGESULF .AND. I == 1 .AND. J == 1 ) THEN
+               CALL EMIT_GEOENG( Input_Opt, State_Met, State_Chm )
             ENDIF
 !-----------------------------------------------------------------------------
 ! NOx AND CO from biofuel combustion [kg/box]  

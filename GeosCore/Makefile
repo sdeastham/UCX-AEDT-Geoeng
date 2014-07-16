@@ -482,9 +482,12 @@ cleanup.o                   : cleanup.F                                      \
                               transport_mod.o         ucx_mod.o              \
                               uvalbedo_mod.o          vistas_anthro_mod.o    \
                               wetscav_mod.o           tpcore_fvdas_mod.o     \
-										longlived_mod.o                                \
+										longlived_mod.o         geoeng_mod.o           \
                               tpcore_geos5_window_mod.o                      \
                               tpcore_geosfp_window_mod.o
+
+geoeng_mod.o                : geoeng_mod.F            chemgrid_mod.o         \
+                              tracer_mod.o            tracerid_mod.o         
 
 cldice_HBrHOBr_rxn.o        : cldice_HBrHOBr_rxn.F
 

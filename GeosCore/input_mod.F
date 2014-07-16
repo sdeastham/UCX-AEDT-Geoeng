@@ -55,6 +55,7 @@
       PRIVATE :: READ_O3PL_MENU
       PRIVATE :: READ_BENCHMARK_MENU  
       PRIVATE :: READ_CH4_MENU
+      PRIVATE :: READ_GEOENG_MENU
       PRIVATE :: VALIDATE_DIRECTORIES  
       PRIVATE :: CHECK_DIRECTORY
       PRIVATE :: CHECK_TIME_STEPS 
@@ -398,6 +399,10 @@
                                    
          ELSE IF ( INDEX( LINE, 'CH4 MENU'         ) > 0 ) THEN 
             CALL READ_CH4_MENU( am_I_Root, Input_Opt, RC )
+
+         ELSE IF ( INDEX( LINE, 'GEOENG MENU'      ) > 0 ) THEN
+            CALL READ_GEOENG_MENU( am_I_Root, Input_Opt )
+                                    
          ELSE IF ( INDEX( LINE, 'END OF FILE'      ) > 0 ) THEN 
             EXIT
 
@@ -3518,6 +3523,263 @@
  130  FORMAT( A, A   )
 
       END SUBROUTINE READ_EMISSIONS_MENU
+!EOC
+!------------------------------------------------------------------------------
+!          Harvard University Atmospheric Chemistry Modeling Group            !
+!------------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: read_geoeng_menu
+!
+! !DESCRIPTION: Subroutine READ\_GEOENG\_MENU reads the GEOENG MENU 
+!  section of the GEOS-Chem input file.
+!\\
+!\\
+! !INTERFACE:
+!
+      SUBROUTINE READ_GEOENG_MENU( am_I_Root, Input_Opt )
+!
+! !USES:
+!
+      USE ERROR_MOD,     ONLY : ERROR_STOP
+      ! SDE 2013-07-28
+      USE GIGC_Input_Opt_Mod, ONLY : OptInput
+      USE GEOENG_MOD,    ONLY : GE_TGS, GE_PCEIL, GE_PBASE
+      USE GEOENG_MOD,    ONLY : GE_MINLAT, GE_MAXLAT, GE_TCONST
+      USE GEOENG_MOD,    ONLY : GE_QQCONST, GE_TGMFACT, GE_QQGMFACT
+      USE GEOENG_MOD,    ONLY : GE_ROOT_NCDF
+!
+! !INPUT PARAMETERS:
+!
+      LOGICAL, INTENT(IN) :: am_I_Root   ! Is this the root CPU?
+      TYPE(OptInput), INTENT(INOUT) :: Input_Opt
+! 
+! !REVISION HISTORY: 
+!  15 Oct 2013 - S. D. Eastham - Initial version (based on EMISSIONS)
+!EOP
+!------------------------------------------------------------------------------
+!BOC
+!
+! !LOCAL VARIABLES:
+!
+      INTEGER            :: N
+      CHARACTER(LEN=255) :: SUBSTRS(MAXDIM), MSG, LOC
+      LOGICAL :: LGEOENG, LGESULF, LCC_GEOMIP
+      LOGICAL :: LCC_TDELTA, LCC_QQDELTA, LCC_QQGEOMIP
+      LOGICAL :: LCC_SFCTGEOMIP, LCC_LAPSEGEOMIP
+      LOGICAL :: LCC_QQCONST, LCC_SFCTCONST
+      LOGICAL :: LCC_LAPSECONST,LCC_TLAPSE
+
+      !=================================================================
+      ! READ_GEOENG_MENU begins here!
+      !=================================================================
+
+      ! Location for error messages
+      LOC = 'READ_GEOENG_MENU ("input_mod.f")'
+
+      ! Use geoengineering module?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:0' )
+      READ( SUBSTRS(1:N), * ) LGEOENG
+
+      ! Apply geoengineering emissions?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:1' )
+      READ( SUBSTRS(1:N), * ) LGESULF
+
+      ! Total geoeongeering emissions (TgS/yr)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:2' )
+      READ( SUBSTRS(1:N), * ) GE_TGS
+
+      ! Geoengineering pressure base (hPa)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:3' )
+      READ( SUBSTRS(1:N), * ) GE_PBASE
+
+      ! Geoengineering pressure ceiling (hPa)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:4' )
+      READ( SUBSTRS(1:N), * ) GE_PCEIL
+
+      ! Lower latitude edge (deg)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:5' )
+      READ( SUBSTRS(1:N), * ) GE_MINLAT
+
+      ! Upper latitude edge (deg)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:6' )
+      READ( SUBSTRS(1:N), * ) GE_MAXLAT
+
+      ! Separator - surface temperature submenu
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:7' )
+
+      ! Apply constant delta to surface temperature?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:8' )
+      READ( SUBSTRS(1:N), * ) LCC_SFCTCONST
+
+      ! Constant surface temperature offset (K)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:9' )
+      READ( SUBSTRS(1:N), * ) GE_TCONST
+
+      ! Apply GeoMIP delta to surface temperature?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:10' )
+      READ( SUBSTRS(1:N), * ) LCC_SFCTGEOMIP
+
+      ! Separator - T lapse rate submenu
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:12' )
+
+      ! Propagate delta T uniformly?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:13' )
+      READ( SUBSTRS(1:N), * ) LCC_LAPSECONST
+
+      ! Propagate delta T using GeoMIP average lapse?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:14' )
+      READ( SUBSTRS(1:N), * ) LCC_LAPSEGEOMIP
+
+      ! Separator - precipitation submenu
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:15' )
+
+      ! Apply constant delta to precipitation?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:16' )
+      READ( SUBSTRS(1:N), * ) LCC_QQCONST
+
+      ! Constant precipitation delta (%)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:17' )
+      READ( SUBSTRS(1:N), * ) GE_QQCONST
+      
+      IF (LCC_QQCONST) GE_QQCONST = GE_QQCONST*1.d-2
+
+      ! Apply GeoMIP delta to precipitation?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:18' )
+      READ( SUBSTRS(1:N), * ) LCC_QQGEOMIP
+
+      ! GeoMIP temperature scaling factor
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:11' )
+      READ( SUBSTRS(1:N), * ) GE_TGMFACT
+
+      ! Geoengineering delta scaling factor (1 = full delta)
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:19' )
+      READ( SUBSTRS(1:N), * ) GE_QQGMFACT
+
+      ! Location of geoengineering NetCDF file
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1 ,'read_geoeng_menu:21' )
+      READ( SUBSTRS(1:N), '(a)' ) GE_ROOT_NCDF
+
+      ! Separator line
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_geoeng_menu:22' )
+
+      !=================================================================
+      ! Error check
+      !=================================================================
+#if !defined( UCX )
+      LGEOENG           = .FALSE.
+#endif
+
+      ! Surface/lapse T deltas first
+      LCC_TDELTA = (LCC_SFCTCONST.or.LCC_SFCTGEOMIP)
+      LCC_QQDELTA= (LCC_QQCONST.or.LCC_QQGEOMIP)
+      LCC_TLAPSE = (LCC_LAPSECONST.or.LCC_LAPSEGEOMIP)
+
+      IF (LCC_TDELTA) THEN
+         IF (LCC_SFCTCONST.and.LCC_SFCTGEOMIP) THEN
+            MSG = 'Only 1 temperature offset scenario can be set.'
+            CALL ERROR_STOP( MSG, LOC )
+         ENDIF
+
+         ! Lapse rate
+         IF (LCC_LAPSECONST.and.LCC_LAPSEGEOMIP) THEN
+            MSG = 'Only 1 temperature lapse scenario can be set.'
+            CALL ERROR_STOP( MSG, LOC )
+         ENDIF
+      ELSE
+         IF (LCC_TLAPSE) THEN
+            MSG = 'Cannot apply temperature lapse without scaling.'
+            CALL ERROR_STOP( MSG, LOC )
+         ENDIF
+         ! Ignore lapse rate stuff
+         LCC_TLAPSE = .FALSE.
+         LCC_LAPSECONST = .FALSE.
+         LCC_LAPSEGEOMIP = .FALSE.
+      ENDIF
+
+      IF (LCC_QQDELTA) THEN
+         IF (LCC_QQCONST.and.LCC_QQGEOMIP) THEN
+            MSG = 'Only 1 precipitation offset scenario can be set.'
+            CALL ERROR_STOP( MSG, LOC )
+         ENDIF
+      ENDIF
+         
+      ! Using any kind of geoengineering?
+      IF (.not.LGEOENG) THEN
+         LGESULF = .FALSE.
+         GE_TGS = 0.0d0
+         GE_TCONST = 0.0d0
+         GE_TGMFACT = 0.0d0
+         LCC_SFCTCONST = .FALSE.
+         LCC_SFCTGEOMIP = .FALSE.
+         LCC_LAPSECONST = .FALSE.
+         LCC_LAPSEGEOMIP = .FALSE.
+         LCC_QQCONST = .FALSE.
+         GE_QQCONST = 0.0d0
+         LCC_QQGEOMIP = .FALSE.
+         GE_QQGMFACT = 0.0d0
+      ENDIF
+
+      ! Store in input option structure
+      Input_Opt%LGEOENG = LGEOENG
+      Input_Opt%LGESULF = LGESULF
+      Input_Opt%LCC_TDELTA = LCC_TDELTA
+      Input_Opt%LCC_QQDELTA = LCC_QQDELTA
+      Input_Opt%LCC_QQGEOMIP = LCC_QQGEOMIP
+      Input_Opt%LCC_SFCTGEOMIP = LCC_SFCTGEOMIP
+      Input_Opt%LCC_LAPSEGEOMIP = LCC_LAPSEGEOMIP
+      Input_Opt%LCC_QQCONST = LCC_QQCONST
+      Input_Opt%LCC_LAPSECONST = LCC_LAPSECONST
+
+      !=================================================================
+      ! Print to screen
+      !=================================================================
+      IF (( am_I_Root ).and.(LGEOENG)) THEN
+         WRITE( 6, '(/,a)' ) 'GEOENGINEERING MENU'
+         WRITE( 6, '(  a)' ) '--------------'
+         WRITE( 6, 100 ) 'Emit geoengineering SO4?    : ', LGESULF
+         IF (LGESULF) THEN
+            WRITE( 6, 130 ) '      --> TgS per year      : ', GE_TGS
+            WRITE( 6, 120 ) '      --> Base P (hPa)      : ', GE_PBASE
+            WRITE( 6, 120 ) '      --> Ceiling P (hPa)   : ', GE_PCEIL
+            WRITE( 6, 120 ) '      --> Min. latitude     : ', GE_MINLAT
+            WRITE( 6, 120 ) '      --> Max. latitude     : ', GE_MAXLAT
+         ENDIF
+         IF (LCC_SFCTCONST) THEN
+            WRITE( 6, 140 ) 'Surface temperature offset  : ', GE_TCONST
+         ELSEIF (LCC_SFCTGEOMIP) THEN
+            WRITE( 6, 120 ) 'Factor applied to GeoMIP dT : ', GE_TGMFACT
+         ENDIF
+         IF (LCC_LAPSECONST) THEN
+            WRITE( 6,'(a)') 'Propagating surface change vertically'
+         ELSEIF (LCC_LAPSEGEOMIP) THEN
+            WRITE( 6,'(a)') 'Using GeoMIP temperature lapse data'
+         ENDIF
+         IF (LCC_QQCONST) THEN
+            WRITE( 6, 150 ) 'Precipitation delta         : ', 
+     &                                              1.d2*GE_QQCONST
+         ELSEIF (LCC_QQGEOMIP) THEN
+            WRITE( 6, 120 ) 'Factor applied to GeoMIP dQQ: ',GE_QQGMFACT
+         ENDIF
+         IF (LCC_QQGEOMIP.or.LCC_SFCTGEOMIP.or.LCC_LAPSEGEOMIP) THEN
+            WRITE( 6, 110 ) 'GeoMIP NetCDF data folder   : ',
+     &             TRIM(GE_ROOT_NCDF)
+         ENDIF
+      ELSEIF ( am_I_Root ) THEN
+         WRITE( 6, '(/,a)' ) 'GEOENGINEERING MENU'
+         WRITE( 6, '(  a)' ) '--------------'
+         WRITE( 6, '(  a)' ) 'Geoengineering module disabled'
+      ENDIF
+
+ 100  FORMAT( A, L5 )
+ 110  FORMAT( A, A )
+ 120  FORMAT( A, f6.2 )
+ 130  FORMAT( A, f6.2, ' TgS/yr')
+ 140  FORMAT( A, f6.2, ' K' )
+ 150  FORMAT( A, f6.2, '%' )
+ 160  FORMAT( A, I2 )
+
+      END SUBROUTINE READ_GEOENG_MENU
 !EOC
 !------------------------------------------------------------------------------
 !                  GEOS-Chem Global Chemical Transport Model                  !

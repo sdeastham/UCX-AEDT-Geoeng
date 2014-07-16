@@ -100,6 +100,7 @@
       USE SOILNOX_RESTART_MOD   ! For reading and writing soil NOx restart
       USE BROMOCARB_MOD         ! For setting CH3Br concentrations in PBL, jpp
       USE LONGLIVED_MOD         ! Initialized long-lived species
+      USE GEOENG_MOD            ! Geoengineering sulfate emissions (SDE)
 
       !-----------------------------------------------------------------
       ! GEOS-Chem met field I/O modules
@@ -521,6 +522,23 @@
       CALL SET_FLOATING_PRESSURE( State_Met%PS1 )
       IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a SET_FLT_PRS' )
 
+      ! Apply T offset to met fields (if needed)
+#if defined(UCX)
+#if defined(GEOS_FP)
+      CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(5,State_Met,Input_Opt)
+#elif defined(MERRA)
+      CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
+#else
+      CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(2,State_Met,Input_Opt)
+      CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
+#endif
+#endif
+
       CALL AIRQNT( State_Met )
       IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a AIRQNT' )
 
@@ -572,6 +590,12 @@
       IF ( LUCX ) THEN
          CALL INIT_UCX( am_I_Root, Input_Opt, NYMDb, NHMSb )
          IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a INIT_UCX' )
+      ENDIF
+
+      ! Initialize geoengineering routines
+      IF ( Input_Opt%LGEOENG ) THEN
+         CALL INIT_GEOENG( am_I_Root, Input_Opt )
+         IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a INIT_GEOENG' )
       ENDIF
 
       ! Set simple initial tracer conditions
@@ -1977,6 +2001,9 @@
          DATE = GET_A1_TIME()
          CALL GEOSFP_READ_A1( DATE(1), DATE(2), Input_Opt, State_Met )
 
+         ! Offset A1 fields
+         CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+
          ! Update daily mean temperature archive for MEGAN biogenics
          ! (tmf, 1/4/2012) This should be turned on!
          IF ( Input_Opt%LMEGAN ) CALL UPDATE_T_DAY( State_Met )
@@ -1989,6 +2016,9 @@
          DATE = GET_A3_TIME()
          CALL GEOSFP_READ_A3( DATE(1), DATE(2), Input_Opt, State_Met )
 
+         ! Offset A3 fields
+         CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+
          ! Since CLDTOPS is an A-3 field, update the
          ! lightning NOx emissions [molec/box/6h]
          IF ( LLIGHTNOX ) CALL LIGHTNING( State_Met )
@@ -2000,6 +2030,9 @@
       IF ( ITS_TIME_ FOR_I3() ) THEN
          DATE = GET_I3_TIME()
          CALL GEOSFP_READ_I3_2( DATE(1), DATE(2), Input_Opt, State_Met )
+
+         ! Offset I3 fields
+         CALL OFFSET_MET_FIELDS(5,State_Met,Input_Opt)
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )
@@ -2022,6 +2055,9 @@
          CALL OPEN_MERRA_A1_FIELDS( DATE(1), DATE(2), Input_Opt )
          CALL GET_MERRA_A1_FIELDS ( DATE(1), DATE(2), State_Met )
 
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+
          !%%% NEED TO UPDATE FOR MERRA %%%
          ! Update daily mean temperature archive for MEGAN biogenics
          ! (tmf, 1/4/2012) This should be turned on!
@@ -2043,6 +2079,9 @@
          CALL GET_MERRA_A3_FIELDS ( DATE(1),   DATE(2), 
      &                              Input_Opt, State_Met )
 
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+
          ! Since CLDTOPS is an A-3 field, update the
          ! lightning NOx emissions [molec/box/6h]
          IF ( Input_Opt%LLIGHTNOX ) CALL LIGHTNING( State_Met )
@@ -2061,6 +2100,9 @@
          ! Open and read files
          CALL OPEN_MERRA_I6_FIELDS ( DATE(1), DATE(2), Input_Opt )
          CALL GET_MERRA_I6_FIELDS_2( DATE(1), DATE(2), State_Met )
+
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )
@@ -2124,6 +2166,9 @@
          CALL OPEN_A3_FIELDS( DATE(1), DATE(2), Input_Opt )
          CALL GET_A3_FIELDS ( DATE(1), DATE(2), State_Met )
 
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+
          ! Update daily mean temperature archive for MEGAN biogenics
          IF ( Input_Opt%LMEGAN ) CALL UPDATE_T_DAY( State_Met )
 
@@ -2143,6 +2188,9 @@
          CALL OPEN_A6_FIELDS( DATE(1), DATE(2), Input_Opt            )
          CALL GET_A6_FIELDS(  DATE(1), DATE(2), Input_Opt, State_Met )      
 
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(2,State_Met,Input_Opt)
+
          ! Since CLDTOPS is an A-6 field, update the
          ! lightning NOx emissions [molec/box/6h]
          IF ( Input_Opt%LLIGHTNOX ) CALL LIGHTNING( State_Met )
@@ -2159,6 +2207,9 @@
          ! Open and read files
          CALL OPEN_I6_FIELDS(  DATE(1), DATE(2), Input_Opt )
          CALL GET_I6_FIELDS_2( DATE(1), DATE(2), State_Met )
+
+         ! Offset fields
+         CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )

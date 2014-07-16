@@ -573,6 +573,22 @@ MODULE GIGC_Input_Opt_Mod
      CHARACTER(LEN=255)          :: GTMM_RST_FILE
 
      !----------------------------------------
+     ! GEOENGINEERING MENU fields
+     !----------------------------------------
+     LOGICAL                     :: LGEOENG
+     LOGICAL                     :: LGESULF
+     LOGICAL                     :: LCC_GEOMIP
+     LOGICAL                     :: LCC_TDELTA
+     LOGICAL                     :: LCC_TLAPSE
+     LOGICAL                     :: LCC_QQDELTA
+     LOGICAL                     :: LCC_QQGEOMIP
+     LOGICAL                     :: LCC_SFCTGEOMIP
+     LOGICAL                     :: LCC_SFCTCONST
+     LOGICAL                     :: LCC_LAPSEGEOMIP
+     LOGICAL                     :: LCC_QQCONST
+     LOGICAL                     :: LCC_LAPSECONST
+
+     !----------------------------------------
      ! CH4 MENU fields
      !----------------------------------------  
      LOGICAL                     :: LCH4BUD
@@ -954,6 +970,8 @@ CONTAINS
     Input_Opt%LRCPSHIP               = .FALSE.
     Input_Opt%LRCPAIR                = .FALSE.
     Input_Opt%LFIXEDYR               = .FALSE.
+    Input_Opt%LRCPLLS                = .FALSE.
+    Input_Opt%LFIXLLS                = .FALSE.
     Input_Opt%LCH4EMIS               = .FALSE.
     Input_Opt%LCH4SBC                = .FALSE.
     Input_Opt%LOCSEMIS               = .FALSE.
@@ -1411,6 +1429,22 @@ CONTAINS
     Input_Opt%Hg_RST_FILE            = ''
     Input_Opt%LGTMM                  = .FALSE.
     Input_Opt%GTMM_RST_FILE          = ''
+
+    !----------------------------------------
+    ! GEOENGINEERING MENU fields
+    !----------------------------------------  
+    Input_Opt%LGEOENG                = .FALSE.
+    Input_Opt%LGESULF                = .FALSE.
+    Input_Opt%LCC_GEOMIP             = .FALSE.
+    Input_Opt%LCC_TDELTA             = .FALSE.
+    Input_Opt%LCC_TLAPSE             = .FALSE.
+    Input_Opt%LCC_QQDELTA            = .FALSE.
+    Input_Opt%LCC_QQGEOMIP           = .FALSE.
+    Input_Opt%LCC_SFCTGEOMIP         = .FALSE.
+    Input_Opt%LCC_SFCTCONST          = .FALSE.
+    Input_Opt%LCC_LAPSEGEOMIP        = .FALSE.
+    Input_Opt%LCC_QQCONST            = .FALSE.
+    Input_Opt%LCC_LAPSECONST         = .FALSE.
 
     !----------------------------------------
     ! CH4 MENU fields

@@ -367,6 +367,10 @@
       USE CMN_SIZE_MOD
       USE ERROR_MOD,          ONLY : ALLOC_ERR
       USE GIGC_State_Met_Mod, ONLY : MetState
+
+      ! Geoengineering (SDE 2014-06-21)
+      USE GEOENG_MOD,  ONLY : GE_QQFACTOR, QQADJUST
+
 !
 ! !INPUT PARAMETERS: 
 !
@@ -593,6 +597,11 @@
            IF ( FRAC > 1d0 ) FRAC = 1d0
            IF ( FRAC < 0d0 ) FRAC = 0d0 
            !##################################################################
+
+            ! GEOENGINEERING FIX
+            IF (QQADJUST) THEN
+               FRAC = FRAC*GE_QQFACTOR
+            ENDIF
 
             ! Start at the top of the atmosphere
             L = LLPAR
