@@ -99,6 +99,7 @@
       USE MEGAN_MOD             ! For biogenic emissions
       USE SOILNOX_RESTART_MOD   ! For reading and writing soil NOx restart
       USE BROMOCARB_MOD         ! For setting CH3Br concentrations in PBL, jpp
+      USE LONGLIVED_MOD         ! Initialized long-lived species
 
       !-----------------------------------------------------------------
       ! GEOS-Chem met field I/O modules
@@ -562,6 +563,10 @@
       CALL READ_RESTART_FILE( NYMDb,     NHMSb, 
      &                        Input_Opt, State_Met, State_Chm )
       IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a READ_RESTART_FILE' )
+
+      ! Initialize routines for long-lived species (eg CH4, CH3Br..)
+      CALL INIT_LLS( am_I_Root, Input_Opt )
+      IF ( prtDebug ) CALL DEBUG_MSG( '### MAIN: a INIT_LLS' )
 
       ! Initialize stratospheric routines
       IF ( LUCX ) THEN
@@ -1098,10 +1103,11 @@
                ! Kludge: eventually I want to keep the concentration
                !         entirely fixed! Ask around on how to...
                !========================================================
-               IF ( LEMIS .and. ( IDTCH3Br > 0 ) ) THEN
+               IF ( LEMIS .and. ( IDTCH3Br > 0 ) .and. 
+     &                            (.not. LUCX) ) THEN
                   CALL SET_CH3Br( N_TRACERS, TCVV,
      &                            STT,       ITS_TIME_FOR_UNIT(),
-     &                            State_Met  )
+     &                            State_Met, Input_opt, am_I_Root  )
                ENDIF
 
                ! ----------------------------------------------------
@@ -1208,10 +1214,11 @@
                ! Kludge: eventually I want to keep the concentration
                !         entirely fixed! Ask around on how to...
                !========================================================
-               IF ( LEMIS .and. ( IDTCH3Br > 0 ) ) THEN
+               IF ( LEMIS .and. ( IDTCH3Br > 0 ) .and. 
+     &                            (.not. LUCX) ) THEN
                   CALL SET_CH3Br( N_TRACERS, TCVV,
      &                            STT,       .FALSE.,
-     &                            State_Met  )
+     &                            State_Met, Input_opt, am_I_Root  )
                ENDIF
 
                ! ----------------------------------------------------

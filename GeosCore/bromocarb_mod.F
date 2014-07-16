@@ -423,15 +423,18 @@
 !\\
 ! !INTERFACE:
 !
-      SUBROUTINE SET_CH3Br( N_TRACERS, TCVV, STT, unit_flag, State_Met )
+      SUBROUTINE SET_CH3Br( N_TRACERS, TCVV, STT, unit_flag, State_Met,
+     &                             Input_Opt, am_I_Root )
 ! 
 ! !USES:
 !
+      USE GIGC_Input_Opt_Mod, ONLY : OptInput
       USE GIGC_State_Met_Mod, ONLY : MetState
       USE GRID_MOD,           ONLY : GET_YMID
       USE LOGICAL_MOD,        ONLY : LWARWICK_VSLS
       USE PBL_MIX_MOD,        ONLY : GET_FRAC_UNDER_PBLTOP
       USE TRACER_MOD,         ONLY : TRACER_NAME
+      USE LONGLIVED_MOD,      ONLY : GET_SCALED_CH3Br
 
       USE CMN_SIZE_MOD             ! Size parameters
 !
@@ -441,6 +444,8 @@
       INTEGER,        INTENT(IN)    :: N_TRACERS
       REAL*8,         INTENT(IN)    :: TCVV(N_TRACERS) ! [Air MW / Tracer MW]
       TYPE(MetState), INTENT(IN)    :: State_Met       ! Met State object
+      TYPE(OptInput), INTENT(IN)    :: Input_Opt   ! Input Options object
+      LOGICAL,        INTENT(IN)    :: am_I_Root
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -477,6 +482,8 @@
       REAL*8            :: CH3Br_conc
       REAL*8            :: LAT_MID
 
+      REAL*8            :: MR90S,MR55S,MR55N,MR90N
+
       ! for testing
       LOGICAL           :: FIRST_COUNT = .TRUE.
 
@@ -503,13 +510,23 @@
          RETURN 
       ENDIF
 
-      ! -----------------------------------------
-      ! If we aren't using bromocarbons, then
-      ! set the CH3Br equal to zero.
-      ! -----------------------------------------
-      IF ( .not. LWARWICK_VSLS ) THEN
-         STT(:,:,:,CH3Br_sel) = 0.d0
-         RETURN
+      IF (Input_Opt%LRCPLLS.or.Input_Opt%LBREMIS) THEN
+         CALL GET_SCALED_CH3Br(MR90S,MR55S,MR55N,MR90N,
+     &                  am_I_Root, Input_Opt)
+      ELSE
+         MR90S = lt55s
+         MR55S = lt0_gt55s
+         MR55N = gt0_lt55n
+         MR90N = gt55n
+
+         ! -----------------------------------------
+         ! If we aren't using bromocarbons, then
+         ! set the CH3Br equal to zero.
+         ! -----------------------------------------
+         IF ( .not. LWARWICK_VSLS ) THEN
+            STT(:,:,:,CH3Br_sel) = 0.d0
+            RETURN
+         ENDIF
       ENDIF
 
       !=================================================================
@@ -531,13 +548,13 @@
 
             ! Selecting the latitude bands:
             IF ( LAT_MID > 55d0 ) THEN
-               CH3Br_conc = gt55N
+               CH3Br_conc = MR90N!gt55N
             ELSEIF ( (LAT_MID >= 0d0) .and. (LAT_MID <= 55d0) ) THEN
-               CH3Br_conc = gt0_lt55N
+               CH3Br_conc = MR55N!gt0_lt55N
             ELSEIF ( (LAT_MID < 0d0) .and. (LAT_MID >= -55d0) ) THEN
-               CH3Br_conc = lt0_gt55S
+               CH3Br_conc = MR55S!lt0_gt55S
             ELSEIF ( LAT_MID < -55d0 ) THEN
-               CH3Br_conc = lt55S
+               CH3Br_conc = MR90S!lt55S
             ENDIF
 
             ! Make sure we're using the correct units

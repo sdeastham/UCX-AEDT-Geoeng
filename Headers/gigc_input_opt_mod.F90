@@ -216,6 +216,8 @@ MODULE GIGC_Input_Opt_Mod
      LOGICAL                     :: LRCPSHIP
      LOGICAL                     :: LRCPAIR
      LOGICAL                     :: LFIXEDYR
+     LOGICAL                     :: LFIXLLS
+     LOGICAL                     :: LRCPLLS
      LOGICAL                     :: LCH4EMIS
      LOGICAL                     :: LCH4SBC
      LOGICAL                     :: LOCSEMIS
@@ -235,7 +237,7 @@ MODULE GIGC_Input_Opt_Mod
      LOGICAL                     :: LSETNOYSTRAT
      LOGICAL                     :: LSETN2O
      LOGICAL                     :: LSETH2SO4
-     INTEGER                     :: CFCYEAR
+     INTEGER                     :: LLSYEAR
      LOGICAL                     :: LFUTURECFC
 
      !----------------------------------------
@@ -971,7 +973,7 @@ CONTAINS
     Input_Opt%LSETNOYSTRAT           = .FALSE.
     Input_Opt%LSETN2O                = .FALSE.
     Input_Opt%LSETH2SO4              = .FALSE.
-    Input_Opt%CFCYEAR                = 0
+    Input_Opt%LLSYEAR                = 0
     Input_Opt%LFUTURECFC             = .FALSE.
 
     !----------------------------------------

@@ -2278,7 +2278,7 @@
       USE TRACER_MOD,         ONLY : ITS_A_FULLCHEM_SIM
       USE TRACERID_MOD,       ONLY : IDTCH4, IDTOCS, IDTCFCX
       USE TRACERID_MOD,       ONLY : IDTCl,  IDTN2O, IDTBr2, IDTH2O
-      USE UCX_MOD,            ONLY : CFCYEAR
+      USE LONGLIVED_MOD,      ONLY : LLSYEAR
 !
 ! !INPUT PARAMETERS:
 !
@@ -2369,6 +2369,7 @@
 ![eml
       INTEGER            :: HISTYR
 !eml]
+      LOGICAL            :: LAEDT, LAEIC, LAIRSO2, LRCPLLS, LFIXLLS
       !=================================================================
       ! READ_EMISSIONS_MENU begins here!
       !=================================================================
@@ -2431,19 +2432,18 @@
 
       ! Use AEDT (FAA) inventory?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR1' )
-      READ( SUBSTRS(1:N), * ) Input_Opt%LAEDT
+      READ( SUBSTRS(1:N), * ) LAEDT
 
       ! Use AEIC (LAE) inventory?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR2' )
-      READ( SUBSTRS(1:N), * ) Input_Opt%LAEIC
+      READ( SUBSTRS(1:N), * ) LAEIC
 
       ! Use standard SO2 inventory?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR3' )
-      READ( SUBSTRS(1:N), * ) Input_Opt%LAIRSO2
+      READ( SUBSTRS(1:N), * ) LAIRSO2
 
       ! Are any full aviation inventories being used
-      LAIREMISS = (Input_Opt%LAEIC.or.Input_Opt%LAEDT)
-      Input_Opt%LAIREMISS = LAIREMISS
+      LAIREMISS = (LAEIC.or.LAEDT)
 
       ! Run LTO emissions?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:AIR4' )
@@ -2580,6 +2580,14 @@
       ! Use RCP (NOx, SO2, CO) ship  emissions?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:RCP6' )
       READ( SUBSTRS(1:N), * ) LRCPSHIP
+
+      ! Use RCP long-lived species surface boundary conditions?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:RCP7' )
+      READ( SUBSTRS(1:N), * ) LRCPLLS
+
+      ! Fix long-lived species target year?
+      CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:RCP8' )
+      READ( SUBSTRS(1:N), * ) LFIXLLS
 
       ! Use EPA/NEI99 emissions?
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:13' )
@@ -2829,10 +2837,10 @@
 
       ! Starting year for CFC emissions
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:73' )
-      READ( SUBSTRS(1:N), '(i)') CFCYEAR
+      READ( SUBSTRS(1:N), '(i)') LLSYEAR
 
       ! Do we apply an offset?
-      LFUTURECFC = (CFCYEAR .gt. 1950)
+      LFUTURECFC = (LLSYEAR .gt. 1950)
 
       ! Separator line
       CALL SPLIT_ONE_LINE( SUBSTRS, N, 1, 'read_emissions_menu:75' )
@@ -2959,7 +2967,7 @@
      &           'READ_EMISSIONS_MENU' )
 
          ! Force user to choose just 1 global aircraft inventory
-         IF ( (Input_Opt%LAEIC.or.Input_Opt%LAEDT) .AND. LRCPAIR )
+         IF ( (LAEIC.or.LAEDT) .AND. LRCPAIR )
      &        CALL ERROR_STOP( 'INPUT.GEOS WARNING!! '//
      &           'Choose either RCP, AEDT or AEIC for global aircraft'//
      &           ' emissions', 'READ_EMISSIONS_MENU' )
@@ -3344,6 +3352,9 @@
       Input_Opt%LDAYBB3        = LDAYBB3
       Input_Opt%L3HRBB3        = L3HRBB3
       Input_Opt%LAIREMISS      = LAIREMISS
+      Input_Opt%LAEIC          = LAEIC
+      Input_Opt%LAEDT          = LAEDT
+      Input_Opt%LAIRSO2        = LAIRSO2
       Input_Opt%LLIGHTNOX      = LLIGHTNOX
       Input_Opt%LOTDLOC        = LOTDLOC
       Input_Opt%LSOILNOX       = LSOILNOX
@@ -3369,6 +3380,8 @@
       Input_Opt%LRCPSHIP       = LRCPSHIP
       Input_Opt%LRCPAIR        = LRCPAIR
       Input_Opt%LFIXEDYR       = LFIXEDYR
+      Input_Opt%LRCPLLS        = LRCPLLS
+      Input_Opt%LFIXLLS        = LFIXLLS
       Input_Opt%LCH4EMIS       = LCH4EMIS
       Input_Opt%LCH4SBC        = LCH4SBC
       Input_Opt%LOCSEMIS       = LOCSEMIS
@@ -3388,7 +3401,7 @@
       Input_Opt%LSETNOYSTRAT   = LSETNOYSTRAT
       Input_Opt%LSETN2O        = LSETN2O
       Input_Opt%LSETH2SO4      = LSETH2SO4
-      Input_Opt%CFCYEAR        = CFCYEAR
+      Input_Opt%LLSYEAR        = LLSYEAR
       Input_Opt%LFUTURECFC     = LFUTURECFC
 
       ! Return success
@@ -3429,6 +3442,9 @@
         WRITE( 6, 110 ) '      RCP year?             : ', RCPYEAR
         WRITE( 6, 100 ) '      RCP aircraft NOx?     : ', LRCPAIR
         WRITE( 6, 100 ) '      RCP ship emissions?   : ', LRCPSHIP
+        WRITE( 6, 100 ) '      RCP LLS BCs?          : ', LRCPLLS
+        WRITE( 6, 100 ) '      Fixed RCP emissions?  : ', LFIXEDYR
+        WRITE( 6, 100 ) '      Fixed RCP BCs?        : ', LFIXLLS
         WRITE( 6, 100 ) 'Use EPA/NEI99 (ANTH + BF)   : ', LNEI99
         WRITE( 6, 100 ) '      --> with NOx VISTAS?  : ', LVISTAS
         WRITE( 6, 100 ) '      --> with ICARTT modif?: ', LICARTT
@@ -3491,7 +3507,7 @@
         WRITE( 6, 100 ) '      --> strat. NOx/HNO3?  : ', LSETNOYSTRAT
         WRITE( 6, 100 ) '      --> N2O?              : ', LSETN2O
         WRITE( 6, 100 ) '      --> strat. H2SO4?     : ', LSETH2SO4
-        WRITE( 6, 110 ) 'CFC emissions read for year : ', CFCYEAR
+        WRITE( 6, 110 ) 'Long-lived species input yr : ', LLSYEAR
       ENDIF
 
       ! FORMAT statements

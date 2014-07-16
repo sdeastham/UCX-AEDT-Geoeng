@@ -379,7 +379,8 @@ bravo_mod.o                 : bravo_mod.F                                    \
 
 bromocarb_mod.o             : bromocarb_mod.F                                \
                               dao_mod.o               logical_mod.o          \
-                              pbl_mix_mod.o           tracer_mod.o
+                              pbl_mix_mod.o           tracer_mod.o           \
+										longlived_mod.o
 
 c2h6_mod.o                  : c2h6_mod.F                                     \
                               biofuel_mod.o           biomass_mod.o          \
@@ -424,7 +425,7 @@ chemdr.o                    : chemdr.F                                       \
                               diag_oh_mod.o           diag_pl_mod.o          \
                               dust_mod.o              future_emissions_mod.o \
                               planeflight_mod.o       restart_mod.o          \
-                              tracerid_mod.o
+                              tracerid_mod.o          longlived_mod.o
 
 chemgrid_mod.o              : chemgrid_mod.F                                 \
                               comode_mod.o            dao_mod.o              \
@@ -481,6 +482,7 @@ cleanup.o                   : cleanup.F                                      \
                               transport_mod.o         ucx_mod.o              \
                               uvalbedo_mod.o          vistas_anthro_mod.o    \
                               wetscav_mod.o           tpcore_fvdas_mod.o     \
+										longlived_mod.o                                \
                               tpcore_geos5_window_mod.o                      \
                               tpcore_geosfp_window_mod.o
 
@@ -642,7 +644,8 @@ emissions_mod.o             : emissions_mod.F                                \
                               RnPbBe_mod.o            seasalt_mod.o          \
                               streets_anthro_mod.o    sulfate_mod.o          \
                               tagged_co_mod.o         tracerid_mod.o         \
-                              ucx_mod.o               vistas_anthro_mod.o
+                              ucx_mod.o               vistas_anthro_mod.o    \
+										longlived_mod.o
 
 epa_nei_mod.o               : epa_nei_mod.F                                  \
                               future_emissions_mod.o  scale_anthro_mod.o     \
@@ -824,6 +827,9 @@ linoz_mod.o                 : linoz_mod.F                                    \
                               chemgrid_mod.o          tracerid_mod.o
 
 logical_mod.o               : logical_mod.F
+
+longlived_mod.o             : longlived_mod.F         rcp_mod.o              \
+                              tracer_mod.o            tracerid_mod.o         
 
 lump.o                      : lump.F                                         \
                               comode_mod.o            tracerid_mod.o
@@ -1013,6 +1019,7 @@ ucx_mod.o                   : ucx_mod.F                                      \
                               chemgrid_mod.o          global_ch4_mod.o       \
                               fast_jx_mod.o           logical_mod.o          \
                               tracer_mod.o            tracerid_mod.o         \
+										longlived_mod.o                                
 
 setmodel.o                  : setmodel.F
 

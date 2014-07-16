@@ -130,7 +130,7 @@
       USE TIME_MOD,               ONLY : ITS_A_NEW_MONTH
       USE TIME_MOD,               ONLY : ITS_A_NEW_YEAR
       USE TRACERID_MOD,           ONLY : IDTSO2, IDTC2H6
-      USE UCX_MOD,                ONLY : EMISS_BASIC
+      USE LONGLIVED_MOD,          ONLY : EMISS_BASIC
       USE VISTAS_ANTHRO_MOD,      ONLY : EMISS_VISTAS_ANTHRO
 
 #if   defined( TOMAS )

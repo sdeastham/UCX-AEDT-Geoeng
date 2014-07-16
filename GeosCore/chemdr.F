@@ -58,6 +58,7 @@
       USE UCX_MOD,              ONLY : CALC_STRAT_AER ! SDE 04/18/13
       USE UCX_MOD,              ONLY : UCX_NOX ! SDE 07/17/13
       USE UCX_MOD,              ONLY : UCX_H2SO4PHOT ! SDE 08/17/13
+      USE LONGLIVED_MOD,        ONLY : GET_SCALED_CH4
 
       IMPLICIT NONE
 !
@@ -475,16 +476,28 @@
             ! concentrations for FUTURE_YEAR.  Otherwise get the CH4
             ! concentrations for the current met field year. 
             ! (swu, havala, bmy, 1/24/08)
-            IF ( LFUTURE ) THEN
-               CH4_YEAR = GET_FUTURE_YEAR()
-            ELSE
-               CH4_YEAR = GET_YEAR()
-            ENDIF
+            
+            ! Alternative: are we using RCP LLS?
+            IF (Input_Opt%LCH4SBC.or.Input_Opt%LRCPLLS) THEN
+               CALL GET_SCALED_CH4(C3090S,C0030S,C0030N,C3090N,
+     &                                am_I_Root, Input_Opt)
+               ! Convert v/v to ppbv
+               C3090S = C3090S*1.0d9
+               C0030S = C0030S*1.0d9
+               C0030N = C0030N*1.0d9
+               C3090N = C3090N*1.0d9
+            ELSE 
+               IF ( LFUTURE ) THEN
+                  CH4_YEAR = GET_FUTURE_YEAR()
+               ELSE
+                  CH4_YEAR = GET_YEAR()
+               ENDIF
 
-            ! Get CH4 [ppbv] in 4 latitude bins for each year
-            CALL GET_GLOBAL_CH4( CH4_YEAR,  .TRUE.,  C3090S,
-     &                           C0030S,    C0030N,  C3090N, 
-     &                           am_I_Root, Input_Opt        )
+               ! Get CH4 [ppbv] in 4 latitude bins for each year
+               CALL GET_GLOBAL_CH4( CH4_YEAR,  .TRUE.,  C3090S,
+     &                              C0030S,    C0030N,  C3090N, 
+     &                              am_I_Root, Input_Opt        )
+            ENDIF
          ENDIF
 
          !-------------------------------
