@@ -478,6 +478,12 @@
             ! (swu, havala, bmy, 1/24/08)
             
             ! Alternative: are we using RCP LLS?
+            IF ( LFUTURE ) THEN
+               CH4_YEAR = GET_FUTURE_YEAR()
+            ELSE
+               CH4_YEAR = GET_YEAR()
+            ENDIF
+
             IF (Input_Opt%LCH4SBC.or.Input_Opt%LRCPLLS) THEN
                CALL GET_SCALED_CH4(C3090S,C0030S,C0030N,C3090N,
      &                                am_I_Root, Input_Opt)
@@ -487,12 +493,6 @@
                C0030N = C0030N*1.0d9
                C3090N = C3090N*1.0d9
             ELSE 
-               IF ( LFUTURE ) THEN
-                  CH4_YEAR = GET_FUTURE_YEAR()
-               ELSE
-                  CH4_YEAR = GET_YEAR()
-               ENDIF
-
                ! Get CH4 [ppbv] in 4 latitude bins for each year
                CALL GET_GLOBAL_CH4( CH4_YEAR,  .TRUE.,  C3090S,
      &                              C0030S,    C0030N,  C3090N, 

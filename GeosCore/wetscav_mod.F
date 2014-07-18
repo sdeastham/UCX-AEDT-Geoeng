@@ -599,9 +599,11 @@
            !##################################################################
 
             ! GEOENGINEERING FIX
+#if defined( UCX )
             IF (QQADJUST) THEN
                FRAC = FRAC*GE_QQFACTOR
             ENDIF
+#endif
 
             ! Start at the top of the atmosphere
             L = LLPAR

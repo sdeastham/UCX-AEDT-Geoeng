@@ -2002,7 +2002,9 @@
          CALL GEOSFP_READ_A1( DATE(1), DATE(2), Input_Opt, State_Met )
 
          ! Offset A1 fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+#endif
 
          ! Update daily mean temperature archive for MEGAN biogenics
          ! (tmf, 1/4/2012) This should be turned on!
@@ -2017,7 +2019,9 @@
          CALL GEOSFP_READ_A3( DATE(1), DATE(2), Input_Opt, State_Met )
 
          ! Offset A3 fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+#endif
 
          ! Since CLDTOPS is an A-3 field, update the
          ! lightning NOx emissions [molec/box/6h]
@@ -2032,7 +2036,9 @@
          CALL GEOSFP_READ_I3_2( DATE(1), DATE(2), Input_Opt, State_Met )
 
          ! Offset I3 fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(5,State_Met,Input_Opt)
+#endif
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )
@@ -2056,7 +2062,9 @@
          CALL GET_MERRA_A1_FIELDS ( DATE(1), DATE(2), State_Met )
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(4,State_Met,Input_Opt)
+#endif
 
          !%%% NEED TO UPDATE FOR MERRA %%%
          ! Update daily mean temperature archive for MEGAN biogenics
@@ -2080,7 +2088,9 @@
      &                              Input_Opt, State_Met )
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+#endif
 
          ! Since CLDTOPS is an A-3 field, update the
          ! lightning NOx emissions [molec/box/6h]
@@ -2102,7 +2112,9 @@
          CALL GET_MERRA_I6_FIELDS_2( DATE(1), DATE(2), State_Met )
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
+#endif
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )
@@ -2167,7 +2179,9 @@
          CALL GET_A3_FIELDS ( DATE(1), DATE(2), State_Met )
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(1,State_Met,Input_Opt)
+#endif
 
          ! Update daily mean temperature archive for MEGAN biogenics
          IF ( Input_Opt%LMEGAN ) CALL UPDATE_T_DAY( State_Met )
@@ -2189,7 +2203,9 @@
          CALL GET_A6_FIELDS(  DATE(1), DATE(2), Input_Opt, State_Met )      
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(2,State_Met,Input_Opt)
+#endif
 
          ! Since CLDTOPS is an A-6 field, update the
          ! lightning NOx emissions [molec/box/6h]
@@ -2209,7 +2225,9 @@
          CALL GET_I6_FIELDS_2( DATE(1), DATE(2), State_Met )
 
          ! Offset fields
+#if defined(UCX)
          CALL OFFSET_MET_FIELDS(3,State_Met,Input_Opt)
+#endif
 
          ! Compute avg pressure at polar caps 
          CALL AVGPOLE( State_Met%PS2 )
