@@ -740,7 +740,10 @@
 #if defined (UCX )
          RTOL(i) = 2.d-2
 #else
-         RTOL(i) = 2.d-1
+         ! SDE 2014-07-19: Found that the non-UCX code also needs
+         ! tighter relative tolerances
+!         RTOL(i) = 2.d-1
+         RTOL(i) = 2.d-2
 #endif
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !%%% NOTE: This update was made in the SEAC4RS code.  Leave here in case we
