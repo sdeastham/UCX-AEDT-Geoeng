@@ -135,6 +135,8 @@
       ! ISR_HOCl           : HOCl MW (inverse sqrt) (kg/kmol)^-0.5
       ! ISR_HOBr           : HOBr MW (inverse sqrt) (kg/kmol)^-0.5
       ! CLOCKMR            : Current base MR for the clock tracer
+      ! LNLBS_*            : Needed for log-normal aerosols
+      ! CHEN*              : Chen et al SNAP settling velocity
       !
       ! Arrays
       !
@@ -196,6 +198,9 @@
       REAL*8                            :: LNLBS_RLIQ, LNLBS_VFALL
       REAL*8                            :: LNLBS_SAD,  LNLBS_LNSSQ
       REAL*8                            :: LNLBS_RMEAN,LNLBS_N
+      REAL*8                            :: CHENA1,     CHENA2
+      REAL*8                            :: CHENM2,     CHENM2A2
+      REAL*8                            :: CHENA1M2
 
       ! Arrays
       REAL*8,DIMENSION(:,:),ALLOCATABLE     :: UCX_MR_IN
@@ -2069,8 +2074,8 @@
                   ! Calculation is done as if it was monodisperse with
                   ! the same N0 and V0, then the flux is adjusted by a
                   ! fixed factor exp(5*ln(sig)^2) (Considine, 2000)
-                  ! LNLBS_RVOL is already in m
-                  RWET(ILIQ) = LNLBS_RVOL
+                  ! LNLBS_RMED is already in m
+                  RWET(ILIQ) = LNLBS_RMED
                ELSE
                   RWET(ILIQ) = RAD_AER(I,J,L,I_SLA)*1.d-2
                ENDIF
@@ -2090,7 +2095,9 @@
                VNAT(L) = 0d0
             ELSE
                ! Calculate common variables first
+               ! Air number density
                sp_Num = P * 1.d3 * 6.023d23 / (8.314 * Temp)
+               ! Air mean free path (um)
                sp_Lambda = 1.d6/(1.41421*sp_Num*3.141592*(3.7d-10)**2)
 
                ! Viscosity [Pa*s] of air as a function of temperature 
@@ -2099,45 +2106,74 @@
                DO IAERO=1,2
                   IF (RWET(IAERO).le.TINY(0d0)) THEN
                      VTS(L,IAERO) = 0d0
-                  ELSE
+                 ELSE
                      ! Dp = particle diameter [um]
                      DP = 2.d0 * RWET(IAERO) * 1.d6        
 
-                     ! PdP = P * dP [hPa * um]
-                     PDp     = P * Dp
+                     ! PdP = P * dP [kPa * um]
+                     !PDp     = P * Dp
 
-                     ! Constant
-                     CONST = 2.d0 * RHO(IAERO) * RWET(IAERO)**2 * g0 / 9.d0
+                     ! Assume single log-normal distribution for
+                     ! all liquid strat aerosol
+                     IF ((IAERO.eq.ILIQ).and.LLOGSTRAT) THEN
+                         ! Chen et al (SNAP-KT scheme)
+                         ! Estimate using the second moment (M2) radius
+                         ! and an adjusted slip factor
+                         ! Calculation should be slightly faster than the
+                         ! normal method because there is only one
+                         ! exponentiation
+                         ! Form has been switched around from that found
+                         ! in Chen et al to make the variables
+                         ! meaningful - slip factor is at least somewhat
+                         ! analogous now, and everything has the right
+                         ! units
+                         CONST = 2.d0 * RHO(IAERO) * g0 * CHENM2 / 9.d0
 
-                     !=========================================================
-                     ! NOTE: Slip correction factor calculations following 
-                     ! Seinfeld, pp464 which is thought to be more accurate 
-                     ! but more computation required. (rjp, 1/24/02)
-                     !
-                     ! # air molecule number density
-                     ! num = P * 1d3 * 6.023d23 / (8.314 * Temp) 
-                     !
-                     ! # gas mean free path
-                     ! lamda = 1.d6/( 1.41421 * num * 3.141592 * (3.7d-10)**2 ) 
-                     !
-                     ! # Slip correction
-                     ! Slip = 1. + 2. * lamda * (1.257 + 0.4 * exp( -1.1 * Dp  
-                     !     &     / (2. * lamda))) / Dp
-                     !
-                     ! NOTE: Eq) 3.22 pp 50 in Hinds (Aerosol Technology)
-                     ! which produces slip correction factore with small error
-                     ! compared to the above with less computation.
-                     !========================================================= 
+                         Slip = 1.d0 + CHENA1M2*(
+     &                        ((sp_Lambda*1.d-6)**CHENA2)*CHENM2A2)
+                         ! Considine et al parameterization
+                         ! Does not account for slip factor correctly,
+                         ! and overestimates fall speed
+                         ! [This used to be positioned after the loop]
+                         !VTS(L,ILIQ) = VTS(L,ILIQ) * LNLBS_VFALL
+                     ELSE
+
+                         ! Constant
+                         ! CONST/VISC is equal to the Stokes' law fall
+                         ! velocity
+                         CONST = 2.d0*RHO(IAERO)*RWET(IAERO)**2*g0/9.d0
+
+                         !=========================================================
+                         ! NOTE: Slip correction factor calculations following 
+                         ! Seinfeld, pp464 which is thought to be more accurate 
+                         ! but more computation required. (rjp, 1/24/02)
+                         !
+                         ! # air molecule number density
+                         ! num = P * 1d3 * 6.023d23 / (8.314 * Temp) 
+                         !
+                         ! # gas mean free path
+                         ! lamda = 1.d6/( 1.41421 * num * 3.141592 * (3.7d-10)**2 ) 
+                         !
+                         ! # Slip correction
+                         ! Slip = 1. + 2. * lamda * (1.257 + 0.4 * exp( -1.1 * Dp  
+                         !     &     / (2. * lamda))) / Dp
+                         !
+                         ! NOTE: Eq) 3.22 pp 50 in Hinds (Aerosol Technology)
+                         ! which produces slip correction factore with small error
+                         ! compared to the above with less computation.
+                         !========================================================= 
                    
-                     ! Slip correction factor (as function of P*dp)
-                     ! Slip = 1.d0+(15.60d0 + 7.0d0 *
-     &               !           EXP(-0.059d0 * PDp)) / PDp
-                     ! Reverting to Seinfeld and Pandis
-                     Slip = 1. + 2. * sp_Lambda * (1.257 + 0.4*exp(-1.1*
-     &                     Dp / (2. * sp_Lambda))) / Dp
+                         ! Slip correction factor (as function of P*dp)
+                         ! Slip = 1.d0+(15.60d0 + 7.0d0 *
+     &                   !           EXP(-0.059d0 * PDp)) / PDp
+                         ! Reverting to Seinfeld and Pandis
+                         Slip = 1. + 2. * sp_Lambda * (1.257 + 0.4*
+     &                         exp(-1.1*Dp / (2. * sp_Lambda))) / Dp
    
+                     ENDIF
                      ! Settling velocity [m/s]
                      VTS(L,IAERO) = CONST * Slip / VISC 
+
                   ENDIF ! RWET
                ENDDO ! IAERO
                
@@ -2152,12 +2188,6 @@
                ENDIF
             ENDIF ! RUNCALC
          ENDDO ! L
-
-         ! Assume single log-normal distribution for
-         ! all liquid strat aerosol
-         IF (LLOGSTRAT) THEN
-            VTS(:,ILIQ) = VTS(:,ILIQ) * LNLBS_VFALL
-         ENDIF
 
          ! First apply simpler SLA sedimentation scheme
          ! Handle model top condition
@@ -3316,6 +3346,7 @@
                       SAD_AER_BOX = LNLBS_SAD * NDENS_AER_BOX ! cm2/cm3
                   ELSE
                       ! Use Grainger's 1995 parameterization
+                      ! VOL_SLA is m3/m3
                       SAD_AER_BOX = SLA_VA*(VOL_SLA**0.751d0)        ! cm2/cm3
                       !RAD_AER_BOX = SLA_VR*SLA_RR*(VOL_SLA**0.249d0) ! m
                       ! Equivalent, faster and more precise
@@ -5381,10 +5412,21 @@
           LNLBS_REFF = DEXP(2.5d0*LNLBS_LNSSQ)
           LNLBS_RLIQ = DEXP(3.5d0*LNLBS_LNSSQ)
           LNLBS_RMEAN= DEXP(0.5d0*LNLBS_LNSSQ)
-          LNLBS_VFALL= DEXP(5.0d0*LNLBS_LNSSQ)
           ! This yields cm2/cm3 when multiplied by N
           LNLBS_SAD  = LNLBS_RMED*LNLBS_RMED*
      &                 PI*4.0d-2*DEXP(2.0d0*LNLBS_LNSSQ)
+
+          ! This was the old Considine parameterization - only valid for
+          ! large particles, not a good fit to LBS
+          LNLBS_VFALL= DEXP(8.0d0*LNLBS_LNSSQ)
+
+          ! Chen et al SNAP scheme
+          CHENA1   = 1.43089d0
+          CHENA2   = 1.0295d0
+          CHENM2   = LNLBS_RMED*LNLBS_RMED*DEXP(2.d0*LNLBS_LNSSQ)
+          CHENM2A2 = LNLBS_RMED**(2.d0-CHENA2)*DEXP((2.d0-CHENA2)*
+     &         (2.d0-CHENA2)*0.5d0*LNLBS_LNSSQ)
+          CHENA1M2 = CHENA1/CHENM2
       ENDIF
 
       ! Set clock tracer mixing ratio to zero
