@@ -58,10 +58,25 @@
       INTEGER, PARAMETER   :: FB_INDEX    = 1
       INTEGER, PARAMETER   :: HC_INDEX    = 2
       INTEGER, PARAMETER   :: CO_INDEX    = 3
-      INTEGER, PARAMETER   :: NOx_INDEX   = 4
-      INTEGER, PARAMETER   :: BC_INDEX    = 5
-      INTEGER, PARAMETER   :: OC_INDEX    = 6
+      INTEGER, PARAMETER   :: NO2_INDEX   = 4
+      INTEGER, PARAMETER   :: NO_INDEX    = 5
+      INTEGER, PARAMETER   :: HONO_INDEX  = 6
+      INTEGER, PARAMETER   :: BC_INDEX    = 7
+      INTEGER, PARAMETER   :: OC_INDEX    = 8
   
+      ! Cruise/LTO NOx multipliers (2014-07-30)
+      REAL*8, PARAMETER     :: LTO_NO_NOx      = 0.76d0
+      REAL*8, PARAMETER     :: LTO_NO2_NOx     = 0.23d0
+      REAL*8, PARAMETER     :: LTO_HONO_NOx    = 0.01d0
+      REAL*8, PARAMETER     :: CRUISE_NO_NOx   = 0.90d0
+      REAL*8, PARAMETER     :: CRUISE_NO2_NOx  = 0.09d0
+      REAL*8, PARAMETER     :: CRUISE_HONO_NOx = 0.01d0
+
+      ! NO2-NO/NO2/HONO mass conversions
+      REAL*8, PARAMETER     :: NO_MASS         = 30.d0
+      REAL*8, PARAMETER     :: NO2_MASS        = 46.d0
+      REAL*8, PARAMETER     :: HONO_MASS       = 47.d0
+      
       ! THC to TOG conversion factor for aircraft emissions
       REAL,    PARAMETER   :: THC2TOG     = 1.16d0
 
@@ -165,8 +180,8 @@
       CHARACTER(LEN=255)    :: FILENAME
       CHARACTER(LEN=255)    :: EMISS_DIR
       REAL*8                :: LTO_FB_MULT, CRUISE_FB_MULT
-      REAL*8,DIMENSION(6)   :: LTOSCALE,CRUISESCALE,EMITSCALE
-      
+      REAL*8,DIMENSION(8)   :: LTOSCALE,CRUISESCALE,EMITSCALE
+
       !=================================================================
       ! READ_AEDT_FILE begins here!
       !=================================================================
@@ -220,11 +235,17 @@
          !FB, CO, HC, NOx, PMNV, PMFO
          READ( IU_FILE, *, IOSTAT=IOS ) J,
      &   I, emzmin, emzmax,
-     &   emiss_temp(1), emiss_temp(2),
-     &   emiss_temp(3), emiss_temp(4),
-     &   emiss_temp(5), emiss_temp(6)
+     &   emiss_temp(FB_INDEX), emiss_temp(CO_INDEX),
+     &   emiss_temp(HC_INDEX), emiss_temp(NO2_INDEX),
+     &   emiss_temp(BC_INDEX), emiss_temp(OC_INDEX)
          ! Convert emissions g/s to kg/s
          emiss_temp(2:6) = emiss_temp(2:6) * 1.0d-3
+
+         ! Copy NO to NO2 and HONO (all actually NOx) and adjust to the
+         ! relevant mass bases
+         ! This will allow direct application of mole fractions later
+         emiss_temp(NO_INDEX)=emiss_temp(NO2_INDEX)*NO_MASS/NO2_MASS
+         emiss_temp(HONO_INDEX)=emiss_temp(NO2_INDEX)*HONO_MASS/NO2_MASS
          
          ! IOS < 0 is end of file
          ! IOS > 0 is an I/O error
@@ -315,38 +336,75 @@
                ! Calculate LTO emissions
                emiss_mini(:) = emiss_temp(:) * ltofrac * 
      &            Input_Opt%LTO_FB_MULT
-               emiss_mini(2) = emiss_mini(2) * Input_Opt%LTO_CO_MULT
-               emiss_mini(3) = emiss_mini(3) * Input_Opt%LTO_HC_MULT
-               emiss_mini(4) = emiss_mini(4) * Input_Opt%LTO_NOx_MULT
+               emiss_mini(CO_INDEX) = emiss_mini(CO_INDEX) *
+     &                                      Input_Opt%LTO_CO_MULT
+               emiss_mini(HC_INDEX) = emiss_mini(HC_INDEX) *
+     &                                      Input_Opt%LTO_HC_MULT
+               emiss_mini(NO_INDEX) = emiss_mini(NO_INDEX) *
+     &                    LTO_NO_NOx * Input_Opt%LTO_NOx_MULT
+               emiss_mini(NO2_INDEX) = emiss_mini(NO2_INDEX) *
+     &                    LTO_NO2_NOx * Input_Opt%LTO_NOx_MULT
+               emiss_mini(HONO_INDEX) = emiss_mini(HONO_INDEX) *
+     &                    LTO_HONO_NOx * Input_Opt%LTO_NOx_MULT
                ! Keep BC and OC as calculated for now
                emiss_mini(7) = 0d0 ! Ignore NO2 fraction
                emiss_mini(8) = 0d0 ! Ignore H2O
                if (actmax .ge. ltoceil) then
                   ! Add cruise emissions
-                  emiss_mini(1:4) = emiss_mini(1:4) + ((1.0d0-ltofrac) 
-     &               * emiss_temp(1:4) * Input_Opt%CRUISE_FB_MULT)
-                  emiss_mini(5) = emiss_mini(5) + ((1.0d0-ltofrac) 
-     &              * emiss_temp(1) * Input_Opt%CRUISE_BC_EI * 1.0d-3
+                  emiss_mini(FB_INDEX) = emiss_mini(FB_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(FB_INDEX)
+     &               * Input_Opt%CRUISE_FB_MULT)
+                  emiss_mini(CO_INDEX) = emiss_mini(CO_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(CO_INDEX)
+     &               * Input_Opt%CRUISE_FB_MULT
+     &               * Input_Opt%CRUISE_CO_MULT)
+                  emiss_mini(HC_INDEX) = emiss_mini(HC_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(HC_INDEX)
+     &               * Input_Opt%CRUISE_FB_MULT
+     &               * Input_Opt%CRUISE_HC_MULT)
+                  emiss_mini(BC_INDEX) = emiss_mini(BC_INDEX)
+     &              + ((1.0d0-ltofrac) * emiss_temp(FB_INDEX)
+     &              * Input_Opt%CRUISE_BC_EI * 1.0d-3
      &              * Input_Opt%CRUISE_FB_MULT)
-                  emiss_mini(6) = emiss_mini(6) + ((1.0d0-ltofrac) 
-     &              * emiss_temp(1) * Input_Opt%CRUISE_OC_EI * 1.0d-3
+                  emiss_mini(OC_INDEX) = emiss_mini(OC_INDEX)
+     &              + ((1.0d0-ltofrac) * emiss_temp(FB_INDEX)
+     &              * Input_Opt%CRUISE_OC_EI * 1.0d-3
      &              * Input_Opt%CRUISE_FB_MULT)
-                  ! Ignore H2O/NO2 fractions
+                  ! Now NOx as NO/NO2/HONO
+                  emiss_mini(NO_INDEX) = emiss_mini(NO_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(NO_INDEX)
+     &               * CRUISE_NO_NOx
+     &               * Input_Opt%CRUISE_FB_MULT
+     &               * Input_Opt%CRUISE_NOx_MULT)
+                  emiss_mini(NO2_INDEX) = emiss_mini(NO2_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(NO2_INDEX)
+     &               * CRUISE_NO2_NOx
+     &               * Input_Opt%CRUISE_FB_MULT
+     &               * Input_Opt%CRUISE_NOx_MULT)
+                  emiss_mini(HONO_INDEX) = emiss_mini(HONO_INDEX)
+     &               + ((1.0d0-ltofrac) * emiss_temp(HONO_INDEX)
+     &               * CRUISE_HONO_NOx
+     &               * Input_Opt%CRUISE_FB_MULT
+     &               * Input_Opt%CRUISE_NOx_MULT)
                endif
                emiss_mini(:) = emiss_mini(:) * cellfrac
-              
+
                AEIC_EMIT(I,J,K,FB_INDEX) = AEIC_EMIT(I,J,K,FB_INDEX) +
-     &                                       emiss_mini(1)
+     &                                       emiss_mini(FB_INDEX)
                AEIC_EMIT(I,J,K,CO_INDEX) = AEIC_EMIT(I,J,K,CO_INDEX) +
-     &                                       emiss_mini(2)
+     &                                       emiss_mini(CO_INDEX)
                AEIC_EMIT(I,J,K,HC_INDEX) = AEIC_EMIT(I,J,K,HC_INDEX) +
-     &                                       emiss_mini(3)
-               AEIC_EMIT(I,J,K,NOx_INDEX) = AEIC_EMIT(I,J,K,NOx_INDEX) +
-     &                                       emiss_mini(4)
+     &                                       emiss_mini(HC_INDEX)
                AEIC_EMIT(I,J,K,BC_INDEX) = AEIC_EMIT(I,J,K,BC_INDEX) +
-     &                                       emiss_mini(5)
+     &                                       emiss_mini(BC_INDEX)
                AEIC_EMIT(I,J,K,OC_INDEX) = AEIC_EMIT(I,J,K,OC_INDEX) +
-     &                                       emiss_mini(6)
+     &                                       emiss_mini(OC_INDEX)
+               AEIC_EMIT(I,J,K,NO_INDEX) = AEIC_EMIT(I,J,K,NO_INDEX) +
+     &                                       emiss_mini(NO_INDEX)
+               AEIC_EMIT(I,J,K,NO2_INDEX) = AEIC_EMIT(I,J,K,NO2_INDEX)+
+     &                                       emiss_mini(NO2_INDEX)
+               AEIC_EMIT(I,J,K,HONO_INDEX) =AEIC_EMIT(I,J,K,HONO_INDEX)+
+     &                                       emiss_mini(HONO_INDEX)
             endif
             if (emzmax .le. maxalt) then
                ! Last cell
@@ -489,16 +547,16 @@
       LLFILENAME = TRIM( DATA_DIR_1x1 ) //
      &             'MAP_A2A_Regrid_201203/MAP_A2A_latlon_generic1x1.nc'
 
-      DO EMIT_INDEX = 1, 4
+      DO I = 1, 4
   
-         SELECT CASE (EMIT_INDEX)
+         SELECT CASE (I)
             CASE (FB_INDEX)
                EMIT_NAME = 'fuelBurn'
             CASE (CO_INDEX)
                EMIT_NAME = 'CO'
             CASE (HC_INDEX)
                EMIT_NAME = 'HC'
-            CASE (NOx_INDEX)
+            CASE (NO2_INDEX)
                EMIT_NAME = 'NOx'
             CASE DEFAULT
                CALL ERROR_STOP( 'Unrecognized aircraft emission!',
@@ -507,9 +565,9 @@
  
          st4d = (/   1,   1,        1 , INMONTH /)
          ct4d = (/ 360, 180, NLVLAEIC,        1 /)
-         CALL NcRd( AEIC_1x1(:,:,:,EMIT_INDEX),
+         CALL NcRd( AEIC_1x1(:,:,:,I),
      &              AEIC_FID,TRIM(EMIT_NAME), st4d, ct4d )
- 
+
       ENDDO
 
       ! Close NetCDF file
@@ -519,8 +577,14 @@
       LTOSCALE(FB_INDEX) = Input_Opt%LTO_FB_MULT
       LTOSCALE(HC_INDEX) = Input_Opt%LTO_FB_MULT*
      &      Input_Opt%LTO_HC_MULT*1.0d-3
-      LTOSCALE(NOx_INDEX)= Input_Opt%LTO_FB_MULT*
+      LTOSCALE(NO_INDEX)= Input_Opt%LTO_FB_MULT*
+     &      Input_Opt%LTO_NOX_MULT*1.0d-3*
+     &      CRUISE_NO_NOX*NO_MASS/NO2_MASS
+      LTOSCALE(NO2_INDEX)= Input_Opt%LTO_FB_MULT*
      &      Input_Opt%LTO_NOX_MULT*1.0d-3
+      LTOSCALE(HONO_INDEX)= Input_Opt%LTO_FB_MULT*
+     &      Input_Opt%LTO_NOX_MULT*1.0d-3*
+     &      CRUISE_HONO_NOX*HONO_MASS/NO2_MASS
       LTOSCALE(CO_INDEX) = Input_Opt%LTO_FB_MULT*
      &      Input_Opt%LTO_CO_MULT*1.0d-3
       LTOSCALE(BC_INDEX) = Input_Opt%LTO_FB_MULT*
@@ -530,8 +594,14 @@
       CRUISESCALE(FB_INDEX) = Input_Opt%CRUISE_FB_MULT
       CRUISESCALE(HC_INDEX) = Input_Opt%CRUISE_FB_MULT*
      &      Input_Opt%CRUISE_HC_MULT*1.0d-3
-      CRUISESCALE(NOx_INDEX)= Input_Opt%CRUISE_FB_MULT*
+      CRUISESCALE(NO_INDEX)= Input_Opt%CRUISE_FB_MULT*
+     &      Input_Opt%CRUISE_NOX_MULT*1.0d-3*
+     &      CRUISE_NO_NOX*NO_MASS/NO2_MASS
+      CRUISESCALE(NO2_INDEX)= Input_Opt%CRUISE_FB_MULT*
      &      Input_Opt%CRUISE_NOX_MULT*1.0d-3
+      CRUISESCALE(HONO_INDEX)= Input_Opt%CRUISE_FB_MULT*
+     &      Input_Opt%CRUISE_NOX_MULT*1.0d-3*
+     &      CRUISE_HONO_NOX*HONO_MASS/NO2_MASS
       CRUISESCALE(CO_INDEX) = Input_Opt%CRUISE_FB_MULT*
      &      Input_Opt%CRUISE_CO_MULT*1.0d-3
       CRUISESCALE(BC_INDEX) = Input_Opt%CRUISE_FB_MULT*
@@ -669,7 +739,14 @@
             AEIC_EMIT(I,J,L,OC_INDEX) = AEIC_EMIT(I,J,L,FB_INDEX)
             AEIC_EMIT(I,J,L,BC_INDEX) = AEIC_EMIT(I,J,L,FB_INDEX)
 
+            ! Copy NO and HONO from NO2 but apply speciation in
+            ! cruise/LTO (different speciation in each). Mass bases also
+            ! handled in EMITSCALE
+            AEIC_EMIT(I,J,L,NO_INDEX) = AEIC_EMIT(I,J,L,NO2_INDEX)
+            AEIC_EMIT(I,J,L,HONO_INDEX) = AEIC_EMIT(I,J,L,NO2_INDEX)
+
             ! Store emissions
+            ! This also applies BC/OC EIs and NO/NO2/HONO split
             AEIC_EMIT(I,J,L,:) = EMITSCALE*AEIC_EMIT(I,J,L,:)
             
          ENDDO
@@ -764,6 +841,9 @@
       INTEGER, SAVE    :: LAST_DAY   = 0
       LOGICAL, SAVE    :: FIRST      = .TRUE.
       REAL*8,  SAVE    :: FBSUM      = 0d0
+      REAL*8           :: NOSUM   
+      REAL*8           :: NO2SUM  
+      REAL*8           :: HONOSUM 
 
       ! AEDT modifications
       LOGICAL          :: PRINT_AEIC
@@ -846,10 +926,20 @@
       ENDIF
 
       IF (PRINT_AEIC) THEN
+         NOSUM   = SUM(AEIC_EMIT(:,:,:,NO_INDEX))
+         NO2SUM  = SUM(AEIC_EMIT(:,:,:,NO2_INDEX))
+         HONOSUM = SUM(AEIC_EMIT(:,:,:,HONO_INDEX))
          WRITE(6,*) 'Aircraft fuelburn: ',
      &       SUM(AEIC_EMIT(:,:,:,FB_INDEX)), ' kg/s'
-         WRITE(6,*) 'Aircraft NOx     : ',
-     &       SUM(AEIC_EMIT(:,:,:,NOx_INDEX)), ' kg/s'
+         WRITE(6,*) 'Aircraft NO      : ',
+     &       NOSUM, ' kg/s'
+         WRITE(6,*) 'Aircraft NO2     : ',
+     &       NO2SUM, ' kg/s'
+         WRITE(6,*) 'Aircraft HONO    : ',
+     &       HONOSUM, ' kg/s'
+         WRITE(6,*) 'Aircraft NOx(NO2): ',
+     &       ((NOSUM/NO_MASS)+(NO2SUM/NO2_MASS)+(HONOSUM/HONO_MASS))
+     &                            *NO2_MASS, ' kg/s'
          WRITE(6,*) 'Aircraft CO      : ',
      &       SUM(AEIC_EMIT(:,:,:,CO_INDEX)), ' kg/s'
          WRITE(6,*) 'Aircraft BC/PMNV : ',
@@ -891,7 +981,11 @@
      &          ((AEIC_EMIT(I,J,L,FB_INDEX)*64.0d0*TMPMULT)
      &           *(1.d0-SULFCONV))
          STT(I,J,L,IDTNO) = STT(I,J,L,IDTNO) +
-     &           (AEIC_EMIT(I,J,L,NOx_INDEX)*DTSRCE)
+     &           (AEIC_EMIT(I,J,L,NO_INDEX)*DTSRCE)
+         STT(I,J,L,IDTNO2) = STT(I,J,L,IDTNO2) +
+     &           (AEIC_EMIT(I,J,L,NO2_INDEX)*DTSRCE)
+         STT(I,J,L,IDTHNO2) = STT(I,J,L,IDTHNO2) +
+     &           (AEIC_EMIT(I,J,L,HONO_INDEX)*DTSRCE)
          STT(I,J,L,IDTCO) = STT(I,J,L,IDTCO) +
      &           (AEIC_EMIT(I,J,L,CO_INDEX)*DTSRCE)
          STT(I,J,L,IDTOCPI) = STT(I,J,L,IDTOCPI) +
@@ -935,8 +1029,10 @@
          ! ND32 -- NOx aircraft emissions in [molec/cm2]
          IF ( ND32 > 0 .and. L <= LLCHEM ) THEN
             AD32_ac(I,J,L) = AD32_ac(I,J,L) +
-     &                       (AEIC_EMIT(I,J,L,NOx_INDEX)  *
-     &                       XNUMOL(IDTNO2) / AREA_CM2 )
+     &       ( (AEIC_EMIT(I,J,L,NO2_INDEX)*XNUMOL(IDTNO2) +
+     &          AEIC_EMIT(I,J,L,NO_INDEX)*XNUMOL(IDTNO)  +
+     &          AEIC_EMIT(I,J,L,HONO_INDEX)*XNUMOL(IDTHNO2)) /
+     &                       AREA_CM2 )
          ENDIF
 
          ! ND13 -- SO2 aircraft emissions in [kg S/box/timestep]
@@ -1007,7 +1103,7 @@
       AEIC_REGRID = 0d0
   
       ! AEIC_EMIT holds the output grids
-      ALLOCATE( AEIC_EMIT( IIPAR, JJPAR, LLPAR, 6 ), STAT=AS )
+      ALLOCATE( AEIC_EMIT( IIPAR, JJPAR, LLPAR, 8 ), STAT=AS )
       IF ( AS /= 0 ) CALL ALLOC_ERR( 'AEIC_EMIT' )
       AEIC_EMIT = 0d0
 
