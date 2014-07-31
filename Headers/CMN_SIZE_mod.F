@@ -468,7 +468,7 @@
 #elif defined( APM )
       INTEGER, PARAMETER :: NNPAR   = 154   ! For APM (G. Luo, 3/8/11)
 #else
-      INTEGER, PARAMETER :: NNPAR   = 125   ! For non-TOMAS simulations
+      INTEGER, PARAMETER :: NNPAR   = 126   ! For non-TOMAS simulations
 #endif
 
       ! Nempara increased to 26. (fp, 2/8/10)

@@ -297,6 +297,7 @@
 
       ! Stratospheric chemistry (SDE 04/11/13)
       INTEGER            :: IDHOCl, IDClNO3, IDHCl, IDO1D, IDO3P
+      INTEGER            :: IDSO4g
 
       ! GEOS-CHEM tracer ID's
       INTEGER            :: IDTNO,   IDTNO2,   IDTNO3,  IDTHNO2, IDTO3
@@ -356,7 +357,7 @@
       INTEGER            :: IDTCFCX,  IDTHCFCX
       INTEGER            :: IDTCFC11, IDTCFC12, IDTHCFC22
       INTEGER            :: IDTH1211, IDTH1301, IDTH2402
-      INTEGER            :: IDTH2O
+      INTEGER            :: IDTH2O,   IDTSO4g
 
       ! Reservoirs
       INTEGER            :: IDTN2O, IDTOCS, IDTCLOCK
@@ -1210,6 +1211,9 @@
 
             CASE ( 'OCS' )
                IDTOCS = N
+
+            CASE ( 'SO4G' )
+               IDTSO4g  = N
 
             CASE ( 'CLOCK' )
                IDTCLOCK = N
@@ -3213,6 +3217,7 @@
          IF ( NAMEGAS(I) == 'HCl'      ) IDHCl      = I
          IF ( NAMEGAS(I) == 'O1D'      ) IDO1D      = I
          IF ( NAMEGAS(I) == 'O'        ) IDO3P      = I
+         IF ( NAMEGAS(I) == 'SO4g'     ) IDSO4g     = I
       ENDDO
 
       !=================================================================
@@ -4224,6 +4229,7 @@
       IDHCl     = 0 ! (SDE 04/11/13)
       IDO1D     = 0 ! (SDE 04/11/13)
       IDO3P     = 0 ! (SDE 04/11/13)
+      IDSO4g    = 0 ! (SDE 04/11/13)
       IDDRYO3   = 0
       IDDRYPAN  = 0
       IDDRYNO2  = 0       
@@ -4407,6 +4413,7 @@
       IDTH2O     = 0
       IDTN2O     = 0
       IDTOCS     = 0
+      IDTSO4g    = 0    
       IDTCLOCK   = 0
       ! +++++++++++++++++
 

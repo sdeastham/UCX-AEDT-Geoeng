@@ -5095,7 +5095,7 @@
             !------------------
 
             ! Number of tracers
-            NTRAC(22) = 28
+            NTRAC(22) = 29
 
             ! Loop over tracers
             DO T = 1, NTRAC(22)
@@ -5165,6 +5165,8 @@
                      NAME(T,22) = 'JHAC'
                   CASE( 28 )
                      NAME(T,22) = 'JGLYC'
+                  CASE( 29 )
+                     NAME(T,22) = 'JSO4g'
                  CASE DEFAULT
                   ! Nothing
                END SELECT

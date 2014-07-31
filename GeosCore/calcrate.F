@@ -135,7 +135,7 @@
       ! Online CH4 (SDE 03/25/13, derived from mpayer 01/24/12)
       USE TRACERID_MOD,       ONLY : IDTCH4
       USE FAST_JX_MOD,        ONLY : FJXFUNC
-      USE UCX_MOD,            ONLY : SO4_PHOTFRAC, CHECK_NAT
+      USE UCX_MOD,            ONLY : CHECK_NAT
       USE UCX_MOD,            ONLY : KHETI_SLA
       USE ERROR_MOD,          ONLY : IT_IS_FINITE
 
@@ -1657,32 +1657,38 @@ c new OH+CO rate from JPL2006.
             ENDIF
          ENDIF
 
-         !==============================================================
-         ! SPECIAL TREATMENT FOR H2SO4+hv -> SO2 + 2OH
-         !
-         ! Only allow photolysis of H2SO4 when gaseous (SDE 04/11/13)
-         !
-         !==============================================================
+         !===============================================================
+         ! No longer necessary - using different gas tracer
+         ! SDE 2014-07-30
+         !===============================================================
 
-#if defined( UCX )       
-         IF ( NKSO4PHOT(NCS) > 0 ) THEN
-            ! Calculate if H2SO4 expected to be gaseous or aqueous
-            ! Only allow photolysis above 6 hPa
-            PHOTVAL = NKSO4PHOT(NCS)-NRATES(NCS)
-            NKN     = NKNPHOTRT(PHOTVAL,NCS)
-            
-            DO KLOOP = 1, KTLOOP 
-               JLOOP            = LREORDER(KLOOP+JLOOPLO)
-
-               ! Find location
-               IX               = IXSAVE(JLOOP)
-               IY               = IYSAVE(JLOOP)
-               IZ               = IZSAVE(JLOOP)                  
-               RRATE(KLOOP,NKN)=RRATE(KLOOP,NKN)
-     &                            *SO4_PHOTFRAC(IX,IY,IZ)
-            ENDDO
-         ENDIF
-#endif
+!         !==============================================================
+!         ! SPECIAL TREATMENT FOR H2SO4+hv -> SO2 + 2OH
+!         !
+!         ! Only allow photolysis of H2SO4 when gaseous (SDE 04/11/13)
+!         !
+!         !==============================================================
+!
+!#if defined( UCX )       
+!         IF ( NKSO4PHOT(NCS) > 0 ) THEN
+!            ! Calculate if H2SO4 expected to be gaseous or aqueous
+!            ! Only allow photolysis above 6 hPa
+!            PHOTVAL = NKSO4PHOT(NCS)-NRATES(NCS)
+!            NKN     = NKNPHOTRT(PHOTVAL,NCS)
+!            
+!            DO KLOOP = 1, KTLOOP 
+!               JLOOP            = LREORDER(KLOOP+JLOOPLO)
+!
+!               ! Find location
+!               IX               = IXSAVE(JLOOP)
+!               IY               = IYSAVE(JLOOP)
+!               IZ               = IZSAVE(JLOOP)                  
+!               RRATE(KLOOP,NKN)=RRATE(KLOOP,NKN)
+!     &                            *SO4_PHOTFRAC(IX,IY,IZ)
+!            ENDDO
+!         ENDIF
+!#endif
+         !===============================================================
 
          !==============================================================
          ! SPECIAL TREATMENT FOR O2+hv -> O+O
@@ -1880,6 +1886,8 @@ c new OH+CO rate from JPL2006.
                INDEX = 27
             CASE ( 'GLYC'  )
                INDEX = 28
+            CASE ( 'SO4g'  )
+               INDEX = 29
             CASE DEFAULT
                INDEX = 0
          END SELECT

@@ -41,7 +41,6 @@
       REAL*8,             PUBLIC :: P_ICE_SUPERSAT ! Ice supersaturation (-)
                           PUBLIC :: KHETI_SLA ! Reaction cofactors for SLA
                           PUBLIC :: NDENS_AER ! See below
-      INTEGER,            PUBLIC :: CFCYEAR ! Year for CFC emissions
 !
 ! !PUBLIC MEMBER FUNCTIONS:
 !
@@ -49,7 +48,6 @@
       PUBLIC  :: SET_H2O_TRAC
       PUBLIC  :: SET_CLOCK_TRAC
       PUBLIC  :: SETTLE_STRAT_AER
-      PUBLIC  :: SO4_PHOTFRAC
       PUBLIC  :: UCX_NOX
       PUBLIC  :: UCX_H2SO4PHOT
       PUBLIC  :: CALC_STRAT_AER
@@ -808,17 +806,27 @@
 
          IF (LSETH2SO4) THEN
             IF ( am_I_Root ) THEN
-               WRITE(6,*) '|H2SO4    |         |         |'
+               WRITE(6,*) '|H2SO4(aq)|H2SO4(g) |         |'
                WRITE(6,*) '|---------|---------|---------|'
             ENDIF
             ! No Montreal scaling
             SCALEFAC = 1.d0
 
+            ! H2SO4 aerosol
             TRAC_IDX = IDTSO4
-            ! Actually H2SO4 aerosol
             TRAC_SET = 'SO4'
             CALL APPLY_2DTRAC( .FALSE., .TRUE., .FALSE., SCALEFAC,
      &                         Input_Opt, State_Met, State_Chm )
+
+            IF (IDTSO4g > 0) THEN
+               ! Now H2SO4 gas/vapor
+               TRAC_IDX = IDTSO4g
+               TRAC_SET = 'SO4g'
+               ! Zero out the troposphere
+               STT(:,:,:,TRAC_IDX) = 0d0
+               CALL APPLY_2DTRAC( .FALSE., .TRUE., .FALSE., SCALEFAC,
+     &                            Input_Opt, State_Met, State_Chm )
+           ENDIF
          ENDIF
       ENDIF ! USE2DDATA
 
@@ -2585,7 +2593,7 @@
       USE GIGC_Input_Opt_Mod, ONLY : OptInput
       USE GIGC_State_Chm_Mod, ONLY : ChmState
       USE GIGC_State_Met_Mod, ONLY : MetState
-      USE TRACERID_MOD,       ONLY : IDTSO4
+      USE TRACERID_MOD,       ONLY : IDTSO4, IDTSO4g
       USE PRESSURE_MOD,       ONLY : GET_PCENTER
 !
 ! !INPUT PARAMETERS:
@@ -2628,6 +2636,8 @@
       LOGICAL            :: LPRT
       INTEGER            :: N_TRACERS
       REAL*8             :: TRACER_MW_G(Input_Opt%N_TRACERS)
+      REAL*8             :: LIQFRAC, GASFRAC, H2SO4MASS
+      LOGICAL            :: ISGAS, ISLIQ
 
       ! Pointers
       REAL*8, POINTER    :: STT(:,:,:,:)
@@ -2659,7 +2669,8 @@
 !$OMP+PRIVATE( PCENTER,    TCENTER,        INVAIR  )
 !$OMP+PRIVATE( H2SO4SUM,   GF_PP,          GF_INVT )
 !$OMP+PRIVATE( GF_CFACTOR, GF_LOGPSULFATE, GF_PVAP )
-!$OMP+PRIVATE( GF_DIFF                             )
+!$OMP+PRIVATE( GF_DIFF,    LIQFRAC,        GASFRAC )
+!$OMP+PRIVATE( H2SO4MASS,  ISGAS,          ISLIQ   )
 !$OMP+SCHEDULE( DYNAMIC )
       DO L = 1, LLPAR
       DO J = 1, JJPAR
@@ -2668,13 +2679,19 @@
          PCENTER = GET_PCENTER(I,J,L)
          TCENTER = State_Met%T(I,J,L)
          INVAIR  = AIRMW / State_Met%AD(I,J,L)
+         H2SO4MASS = STT(I,J,L,IDTSO4)+STT(I,J,L,IDTSO4g)
+         H2SO4SUM = H2SO4MASS*INVAIR/TRACER_MW_G(IDTSO4)
+         ! Generic (to be safe)
+         ISLIQ = .TRUE.
+         ISGAS = .FALSE.
          IF (PCENTER.ge.1.d2) THEN
-            AERFRAC(I,J,L,1) = 1d0
+            ISLIQ = .TRUE.
+            ISGAS = .FALSE.
          ELSEIF (ITS_IN_THE_TROP(I,J,L,State_Met)) THEN
             ! Don't want to interfere with tropospheric aerosols
-            AERFRAC(I,J,L,1) = 1d0
+            ISLIQ = .TRUE.
+            ISGAS = .FALSE.
          ELSE
-            H2SO4SUM = STT(I,J,L,IDTSO4  )*INVAIR/TRACER_MW_G(IDTSO4  )
             ! Use approximation from Kumala (1990)
             GF_PP = H2SO4SUM*PCENTER
             GF_INVT = 1./TCENTER
@@ -2685,13 +2702,49 @@
             GF_PVAP = 1.d-2 * EXP(GF_LOGPSULFATE)
             GF_DIFF = (GF_PVAP+GF_THRESHOLD) - GF_PP
             IF (GF_DIFF .lt. 0) THEN
-               AERFRAC(I,J,L,1) = 1.d0
+               LIQFRAC = 1d0
+               GASFRAC = 0d0
+               ISLIQ = .TRUE.
+               ISGAS = .FALSE.
             ELSEIF (GF_DIFF .lt. GF_RANGE) THEN
-               AERFRAC(I,J,L,1) = 1.d0-(GF_DIFF/GF_RANGE)
+               GASFRAC = GF_DIFF/GF_RANGE
+               ! In case of division issues
+               IF (GASFRAC.lt.1.d-6) THEN
+                  ISLIQ = .TRUE.
+                  ISGAS = .FALSE.
+               ELSEIF (GASFRAC.gt.1d0) THEN
+                  ISLIQ = .FALSE.
+                  ISGAS = .TRUE.
+               ELSE
+                  LIQFRAC = 1.d0-(GF_DIFF/GF_RANGE)
+                  ISLIQ = .FALSE.
+                  ISGAS = .FALSE.
+               ENDIF
             ELSE
-               AERFRAC(I,J,L,1) = 0d0
+               ! 100% gas/vapor
+               ISLIQ = .FALSE.
+               ISGAS = .TRUE.
             ENDIF
          ENDIF
+
+         ! Since gaseous H2SO4 is now kept in a different tracer
+         ! we should always set its AERFRAC to 1 unless we're zeroing
+         ! aerosol-form H2SO4
+         ! Partition SO4 and SO4g
+         IF (ISLIQ) THEN
+            AERFRAC(I,J,L,1) = 1.d0
+            STT(I,J,L,IDTSO4) = H2SO4MASS
+            STT(I,J,L,IDTSO4g) = TINY(1d0)
+         ELSEIF (ISGAS) THEN
+            AERFRAC(I,J,L,1) = 0.d0
+            STT(I,J,L,IDTSO4) = TINY(1d0)
+            STT(I,J,L,IDTSO4g) = H2SO4MASS
+         ELSE
+            AERFRAC(I,J,L,1) = 1.d0
+            STT(I,J,L,IDTSO4) = LIQFRAC*H2SO4MASS
+            STT(I,J,L,IDTSO4g) = GASFRAC*H2SO4MASS
+         ENDIF
+
       ENDDO
       ENDDO
       ENDDO
@@ -2704,44 +2757,6 @@
       IF ( LPRT ) CALL DEBUG_MSG( '### UCX: H2SO4 partitioned' )
 
       END SUBROUTINE CALC_H2SO4_GAS
-!
-!EOC
-!------------------------------------------------------------------------------
-!               MIT Laboratory for Aviation and the Environment               !
-!------------------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: SO4_PHOTFRAC
-!
-! !DESCRIPTION: FUNCTION SO4\_PHOTFRAC returns the fraction of H2SO4 which 
-!  is available for photolysis.
-!\\
-!\\
-! !INTERFACE:
-!
-      REAL*8 FUNCTION SO4_PHOTFRAC(I,J,L)
-!
-! !INPUT PARAMETERS:
-!
-      INTEGER,INTENT(IN)          :: I,J,L      ! Location indices
-!
-! !OUTPUT VARIABLES:
-!
-!      REAL*8, INTENT(OUT)         :: PHOTFRAC   ! Gaseous fraction of H2SO4
-!
-! !REVISION HISTORY: 
-!  11 Apr 2013 - S. D. Eastham - Initial version
-!EOP
-!------------------------------------------------------------------------------
-!BOC
-!
-      !=================================================================
-      ! SO4_PHOTFRAC begins here!
-      !=================================================================
-
-      SO4_PHOTFRAC = 1.d0 - AERFRAC(I,J,L,1)
-
-      END FUNCTION SO4_PHOTFRAC
 !
 !EOC
 !------------------------------------------------------------------------------
@@ -2899,6 +2914,10 @@
       INTEGER                :: N_TRACERS
       REAL*8                 :: TRACER_MW_G(Input_Opt%N_TRACERS)
 
+      ! Diagnostic variables
+      REAL*8                 :: DIAG_AIRVOL, DIAG_NSLA
+      REAL*8                 :: DIAG_KG, DIAG_M3
+
       ! Pointers
       REAL*8, POINTER        :: STT(:,:,:,:)
 
@@ -2939,6 +2958,14 @@
       D_MAXN = 0d0
       D_PP   = 0d0
       D_PS   = 0d0
+
+      ! Diagnostic variables
+      IF (prtDebug) THEN
+         DIAG_AIRVOL = 0d0
+         DIAG_NSLA = 0d0
+         DIAG_KG = 0d0
+         DIAG_M3 = 0d0
+      ENDIF
       
       ! Loop over latitude boxes first
 !$OMP PARALLEL DO
@@ -3358,11 +3385,16 @@
      &                          State_Met%AIRVOL(I,J,L)
 
                   IF (VOL_SLA.gt.1.d-30) THEN
-                     ! Approximate particles as spherical for calculation
-                     ! of aerosol number density
-                     NDENS_AER_BOX = VOL_SLA*3.d0/
-     &                       (4.d0*PI*(RAD_AER_BOX**3.d0))
-
+                     ! Diagnostic quantity
+                     IF (prtDebug.and.(AERFRAC(I,J,L,1).gt.1.d-10)) THEN
+                        DIAG_NSLA = DIAG_NSLA +
+     &                     (NDENS_AER_BOX*State_Met%AIRVOL(I,J,L))
+                        DIAG_AIRVOL = DIAG_AIRVOL + 
+     &                                    State_Met%AIRVOL(I,J,L)
+                        DIAG_KG = DIAG_KG + KG_AER_BOX
+                        DIAG_M3 = DIAG_M3 +
+     &                            VOL_SLA*State_Met%AIRVOL(I,J,L)
+                     ENDIF
                      ! DENAIR in #/m3 - convert to #/cm3
                      ! RHO_AER_BOX in kg/m3 - convert to g/cm3
                      ! RAD_AER_BOX in m - convert to cm
@@ -3469,30 +3501,35 @@
       IF ( prtDebug ) THEN
          CALL DEBUG_MSG( '### UCX: after CALC_STRAT_AER' )
          WRITE(6,'(a)') 'Strat. aerosol diagnostics summary:'
-         WRITE(6,'(a,1x,E12.4)') 'Peak particle # density (#/m3): ',
-     &                               MAXVAL(NDENS_AER(:,:,:,I_SPA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak particle density (kg/m3) : ',
-     &                               MAXVAL(RHO_AER(:,:,:,I_SPA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak particle SAD (cm2/cm3)   : ',
-     &                               MAXVAL(SAD_AER(:,:,:,I_SPA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak particle radius (cm)     : ',
-     &                               MAXVAL(RAD_AER(:,:,:,I_SPA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS # density (#/m3) : ',
-     &                               MAXVAL(NDENS_AER(:,:,:,I_SLA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS density (kg/m3)  : ',
-     &                               MAXVAL(RHO_AER(:,:,:,I_SLA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS SAD (cm2/cm3)    : ',
-     &                               MAXVAL(SAD_AER(:,:,:,I_SLA))
-         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS radius (cm)      : ',
-     &                               MAXVAL(RAD_AER(:,:,:,I_SLA))
-         WRITE(6,'(a,1x,E12.4)') 'NAT/NO3 fraction in max-NAT box  : ',
-     &                               D_MAXN                       
-         WRITE(6,'(a,3(1x,E12.4))') 'Local MR (H2O-HNO3-NAT) (v/v) : ',
-     &                               D_XH2O,D_XHNO3,D_XNAT        
-         WRITE(6,'(a,3(1x,E12.4))') 'Pressure (box-HNO3-sat) (Pa)  : ',
-     &                               D_PPA,D_PP,D_PS        
-         WRITE(6,'(a,1x,E12.4)') 'Local temperature (K)         : ',
-     &                               D_TK                    
+         WRITE(6,'(a,1x,E12.4)') 'Mean SSA/STS # density (#/m3) : ',
+     &                               DIAG_NSLA/DIAG_AIRVOL
+         WRITE(6,'(a,1x,E12.4)') 'Mean SSA/STS density (kg/m3)  : ',
+     &                               DIAG_KG/DIAG_M3
+         ! Old diagnostics
+!         WRITE(6,'(a,1x,E12.4)') 'Peak particle # density (#/m3): ',
+!     &                               MAXVAL(NDENS_AER(:,:,:,I_SPA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak particle density (kg/m3) : ',
+!     &                               MAXVAL(RHO_AER(:,:,:,I_SPA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak particle SAD (cm2/cm3)   : ',
+!     &                               MAXVAL(SAD_AER(:,:,:,I_SPA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak particle radius (cm)     : ',
+!     &                               MAXVAL(RAD_AER(:,:,:,I_SPA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS # density (#/m3) : ',
+!     &                               MAXVAL(NDENS_AER(:,:,:,I_SLA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS density (kg/m3)  : ',
+!     &                               MAXVAL(RHO_AER(:,:,:,I_SLA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS SAD (cm2/cm3)    : ',
+!     &                               MAXVAL(SAD_AER(:,:,:,I_SLA))
+!         WRITE(6,'(a,1x,E12.4)') 'Peak SSA/STS radius (cm)      : ',
+!     &                               MAXVAL(RAD_AER(:,:,:,I_SLA))
+!         WRITE(6,'(a,1x,E12.4)') 'NAT/NO3 fraction in max-NAT box  : ',
+!     &                               D_MAXN                       
+!         WRITE(6,'(a,3(1x,E12.4))') 'Local MR (H2O-HNO3-NAT) (v/v) : ',
+!     &                               D_XH2O,D_XHNO3,D_XNAT        
+!         WRITE(6,'(a,3(1x,E12.4))') 'Pressure (box-HNO3-sat) (Pa)  : ',
+!     &                               D_PPA,D_PP,D_PS        
+!         WRITE(6,'(a,1x,E12.4)') 'Local temperature (K)         : ',
+!     &                               D_TK                    
       ENDIF
 
       ! Free pointer
@@ -5094,7 +5131,7 @@
       USE GIGC_State_Chm_Mod, ONLY : ChmState
       USE GIGC_State_Met_Mod, ONLY : MetState
       USE TIME_MOD,           ONLY : GET_TS_CHEM
-      USE TRACERID_MOD,       ONLY : IDTSO2,IDTSO4
+      USE TRACERID_MOD,       ONLY : IDTSO2,IDTSO4g
       USE FAST_JX_MOD,        ONLY : FJXFUNC
 !
 ! !INPUT PARAMETERS:
@@ -5161,7 +5198,7 @@
                LOCAL_IPHOT = LOCAL_NKSO4PHOT - NRATES(ICS)
                IFNC = DEFPRAT(LOCAL_NKSO4PHOT,ICS) + 0.01d0
                IBRCH = 10.d0*(DEFPRAT(LOCAL_NKSO4PHOT,ICS)-IFNC) + 0.5d0
-               RELWT = TRACER_MW_G(IDTSO2)/TRACER_MW_G(IDTSO4)
+               RELWT = TRACER_MW_G(IDTSO2)/TRACER_MW_G(IDTSO4g)
             ENDIF
          ENDDO 
       ENDIF
@@ -5191,10 +5228,11 @@
             DO L=LMINPHOT+1,LLPAR
                ! Apply photolysis to SO4
                ! First retrieve gaseous fraction
-               SO4_IN = STT(I,J,L,IDTSO4)*SO4_PHOTFRAC(I,J,L)
+               !SO4_IN = STT(I,J,L,IDTSO4)*SO4_PHOTFRAC(I,J,L)
+               SO4_IN = STT(I,J,L,IDTSO4g)
                SO4_DELTA = PHOTDELTA*SO4_IN
                ! Remove from SO4
-               STT(I,J,L,IDTSO4) = STT(I,J,L,IDTSO4) - SO4_DELTA
+               STT(I,J,L,IDTSO4g) = STT(I,J,L,IDTSO4g) - SO4_DELTA
                ! Add to SO2. Note change in molar mass
                STT(I,J,L,IDTSO2) = STT(I,J,L,IDTSO2) + (SO4_DELTA*RELWT)
             ENDDO

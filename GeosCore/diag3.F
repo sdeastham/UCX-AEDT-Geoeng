@@ -1684,6 +1684,7 @@
 !  (26 ) JMACR : MACR  J-value                 : s-1   : SCALE_JV
 !  (27 ) JHAC  : HAC   J-value                 : s-1   : SCALE_JV
 !  (28 ) JGLYC : GLYC  J-value                 : s-1   : SCALE_JV
+!  (29 ) JSO4g : SO4g  J-value                 : s-1   : SCALE_JV
 !  (71 ) JCH3I : CH3I  J-value (s^-1)          : s-1   : SCALE_JV
 !  (81 ) JHCN  : HCN   J-value (s^-1)          : s-1   : SCALE_JV
 !
@@ -1806,6 +1807,8 @@
                      MM = 27
                   CASE ( 'GLYC' )
                      MM = 28
+                  CASE ( 'SO4g' )
+                     MM = 29
                   CASE DEFAULT
                      MM = 0
                END SELECT
