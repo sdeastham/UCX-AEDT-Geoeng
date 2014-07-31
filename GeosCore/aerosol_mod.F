@@ -831,7 +831,7 @@
       ! Index to aerosol types in jv_spec.dat
       ! The following are ordered according to the mass densities below
 #if defined( UCX )
-      INTEGER, SAVE       :: IND(NAER) = (/22, 29, 36, 43, 50, 4, 14/)
+      INTEGER, SAVE    :: IND(NAER) = (/22, 29, 36, 43, 50, 4, 14/)
 #else
       INTEGER, SAVE	  :: IND(NAER) = (/22, 29, 36, 43, 50/)
 #endif
@@ -862,6 +862,9 @@
       LSULF                = Input_Opt%LSULF
       LSTRATOD             = Input_Opt%LSTRATOD
       LLOGSTRAT            = Input_Opt%LLOGSTRAT
+      IF (LLOGSTRAT) THEN
+         IND(NRHAER+1)     = Input_Opt%IDX_LBS
+      ENDIF
 
       ! Initialize pointers
       BXHEIGHT            => State_Met%BXHEIGHT
