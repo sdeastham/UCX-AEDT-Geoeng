@@ -4467,7 +4467,7 @@
             IF ( N > N_TRACERS ) CYCLE
             NN = N
             
-            ARRAY(:,:,1) = AD71(:,:,N)/AD71_COUNT
+            ARRAY(:,:,1) = AD71(:,:,M)/AD71_COUNT
 
             CALL BPCH2( IU_BPCH,   MODELNAME, LONRES,   LATRES,
      &                  HALFPOLAR, CENTER180, CATEGORY, NN,    

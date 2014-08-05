@@ -200,13 +200,12 @@
 
          ! Daily max mean hourly surface v/v
          IF ( ND71 > 0 ) THEN
-            AD71       = 0e0
-            AD71_HR    = 0e0
-            AD71_DAY   = 0e0
-            AD71_COUNT = 0
-            AD71_HRCT  = 0
-            AD71_LHR   = -1
-            AD71_LDAY  = -1
+            AD71         = 0e0
+            AD71_HR      = 0e0
+            AD71_DAY     = 0e0
+            AD71_COUNT   = 0
+            AD71_HRCT    = 0
+            AD71_ANYDATA = .FALSE.
          ENDIF
 
          ! For ND03 - mercury simulations (eck, sas, bmy, 1/20/05)
@@ -392,8 +391,7 @@
             AD71_DAY   = 0e0
             AD71_COUNT = 0
             AD71_HRCT  = 0
-            AD71_LHR   = -1
-            AD71_LDAY  = -1
+            AD71_ANYDATA = .FALSE.
          ENDIF
 
          ! Echo output

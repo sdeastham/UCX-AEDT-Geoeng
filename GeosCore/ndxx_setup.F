@@ -79,7 +79,7 @@
       USE DIAG_MOD,        ONLY : AD68,        AD69
       USE DIAG_MOD,        ONLY : AD10,        AD10em,      CTO3_24h
       USE DIAG_MOD,        ONLY : AD64,        AD71,        AD71_HR
-      USE DIAG_MOD,        ONLY : AD71_COUNT,  AD71_LDAY,   AD71_LHR
+      USE DIAG_MOD,        ONLY : AD71_COUNT,  AD71_ANYDATA
       USE DIAG_MOD,        ONLY : AD71_DAY,    AD71_HRCT
       USE DIAG63_MOD,      ONLY : DO_SAVE_DIAG63
       USE DIAG_OH_MOD,     ONLY : INIT_DIAG_OH
@@ -1371,13 +1371,14 @@
          NMAX = MIN( N_TRACERS+1, NNPAR+1 )
 
          ! Resize to NMAX to save memory (bmy, 10/18/00)
-         ALLOCATE( AD71( IIPAR, JJPAR, NMAX ), STAT=AS )
+         ! Just use TMAX(71)? SDE 2014-08-02
+         ALLOCATE( AD71( IIPAR, JJPAR, TMAX(71) ), STAT=AS )
          IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71' )
 
-         ALLOCATE( AD71_HR( IIPAR, JJPAR, NMAX ), STAT=AS )
+         ALLOCATE( AD71_HR( IIPAR, JJPAR, TMAX(71) ), STAT=AS )
          IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_HR' )
 
-         ALLOCATE( AD71_DAY( IIPAR, JJPAR, NMAX ), STAT=AS )
+         ALLOCATE( AD71_DAY( IIPAR, JJPAR, TMAX(71) ), STAT=AS )
          IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_DAY' )
 
          ALLOCATE( AD71_COUNT, STAT=AS )
@@ -1386,11 +1387,9 @@
          ALLOCATE( AD71_HRCT, STAT=AS )
          IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_HRCT' )
 
-         ALLOCATE( AD71_LDAY, STAT=AS )
-         IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_LDAY' )
-
-         ALLOCATE( AD71_LHR, STAT=AS )
-         IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_LHR' )
+         ALLOCATE( AD71_ANYDATA, STAT=AS )
+         IF ( AS /= 0 ) CALL ALLOC_ERR( 'AD71_ANYDAYA' )
+         AD71_ANYDATA = .FALSE.
 
       ENDIF
 
